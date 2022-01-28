@@ -11,6 +11,11 @@ The following additional API are added / planed:
 - [x] replyTo
 - [ ] ...
 
+Spam Errors (optimize so mails get a good spame score at mailtrap):
+- [ ] MIME_HEADER_CTYPE_ONLY
+- [x] fix Date
+- [ ] MISSING_MID
+
 <!-- [![Build Status](https://github.com/manyuanrong/deno-smtp/workflows/ci/badge.svg?branch=master)](https://github.com/manyuanrong/deno-smtp/actions)
 ![GitHub](https://img.shields.io/github/license/manyuanrong/deno-smtp.svg)
 ![GitHub release](https://img.shields.io/github/release/manyuanrong/deno-smtp.svg)
