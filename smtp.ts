@@ -60,7 +60,7 @@ export class SmtpClient {
       hostname: config.hostname,
       port: config.port || 25,
     });
-    await this._connect(conn, config);
+    await this.#connect(conn, config);
   }
 
   async connectTLS(config: ConnectConfig | ConnectConfigWithAuthentication) {
@@ -68,7 +68,7 @@ export class SmtpClient {
       hostname: config.hostname,
       port: config.port || 465,
     });
-    await this._connect(conn, config);
+    await this.#connect(conn, config);
   }
 
   async close() {
@@ -154,7 +154,7 @@ export class SmtpClient {
     this.assertCode(await this.readCmd(), CommandCode.OK);
   }
 
-  private async _connect(conn: Deno.Conn, config: ConnectConfig) {
+  async #connect(conn: Deno.Conn, config: ConnectConfig) {
     this.#conn = conn;
     const reader = new BufReader(this.#conn);
     this.#writer = new BufWriter(this.#conn);
