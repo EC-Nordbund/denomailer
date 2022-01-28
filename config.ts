@@ -15,7 +15,7 @@ interface SendConfig {
   from: string;
   date?: string;
   subject: string;
-  content: string;
+  content?: string;
   html?: string;
   replyTo?: mailString;
 }
