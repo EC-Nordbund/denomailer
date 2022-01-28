@@ -16,8 +16,14 @@ interface SendConfig {
   date?: string;
   subject: string;
   content?: string;
+  mimeContent?: Content[];
   html?: string;
   replyTo?: mailString;
+}
+
+interface Content {
+  mimeType: string;
+  content: string;
 }
 
 export type mailString = email | emailWithName | wrapedMail;

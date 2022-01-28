@@ -9,7 +9,7 @@ The following additional API are added / planed:
 - [x] STARTTLS (Thanks to @dbellingroth)
 - [ ] Attachments
 - [x] replyTo
-- [ ] rewrite content with more options
+- [x] rewrite content with more options
 - [ ] ...
 
 Spam Errors (optimize so mails get a good spame score at mailtrap):

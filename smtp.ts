@@ -86,6 +86,40 @@ export class SmtpClient {
 
     const date = config.date ?? new Date().toUTCString().split(",")[1].slice(1);
 
+    if (config.mimeContent && (config.html || config.content)) {
+      throw new Error(
+        "You should not use mimeContent together with html or content option!"
+      );
+    }
+
+    if (!config.mimeContent) {
+      config.mimeContent = [];
+
+      if (config.content) {
+        config.mimeContent.push({
+          mimeType: 'text/plain; charset="utf-8"',
+          content: config.content,
+        });
+      }
+
+      if (config.html) {
+        if (!config.content) {
+          console.warn(
+            "[SMTP] We highly recomand adding a plain text content in addition to your html content!"
+          );
+        }
+
+        config.mimeContent.push({
+          mimeType: 'text/html; charset="utf-8"',
+          content: config.html,
+        });
+      }
+    }
+
+    if (config.mimeContent.length === 0) {
+      throw new Error("No Content provided!");
+    }
+
     await this.writeCmd("MAIL", "FROM:", from);
     this.assertCode(await this.readCmd(), CommandCode.OK);
 
@@ -140,16 +174,25 @@ export class SmtpClient {
       "\r\n"
     );
 
-    if (config.html) {
-      await this.writeCmd("--AlternativeBoundary");
-      await this.writeCmd('Content-Type: text/html; charset="utf-8"', "\r\n");
-      await this.writeCmd(config.html, "\r\n");
-    }
+    // if (config.html) {
+    //   await this.writeCmd("--AlternativeBoundary");
+    //   await this.writeCmd('Content-Type: text/html; charset="utf-8"', "\r\n");
+    //   await this.writeCmd(config.html, "\r\n");
+    // }
 
-    if (config.content) {
+    // if (config.content) {
+    //   await this.writeCmd("--AlternativeBoundary");
+    //   await this.writeCmd('Content-Type: text/plain; charset="utf-8"', "\r\n");
+    //   await this.writeCmd(config.content, "\r\n");
+    // }
+
+    for (let i = 0; i < config.mimeContent.length; i++) {
       await this.writeCmd("--AlternativeBoundary");
-      await this.writeCmd('Content-Type: text/plain; charset="utf-8"', "\r\n");
-      await this.writeCmd(config.content, "\r\n");
+      await this.writeCmd(
+        "Content-Type: " + config.mimeContent[i].mimeType,
+        "\r\n"
+      );
+      await this.writeCmd(config.mimeContent[i].content, "\r\n");
     }
 
     await this.writeCmd("--AlternativeBoundary--\r\n.\r\n");
