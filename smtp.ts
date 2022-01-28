@@ -95,9 +95,12 @@ export class SmtpClient {
     if (!config.mimeContent) {
       config.mimeContent = [];
 
-      // Allows to auto 
+      // Allows to auto
       if (config.content === "auto" && config.html) {
-        config.content = config.html.replace(/<[^>]+>/g, "");
+        config.content = config.html
+          .replace(/<head((.|\n|\r)*?)<\/head>/g, "")
+          .replace(/<style((.|\n|\r)*?)<\/style>/g, "")
+          .replace(/<[^>]+>/g, "");
       }
 
       if (config.content) {
