@@ -27,29 +27,27 @@ interface SmtpClientOptions {
 }
 
 export class SmtpClient {
-  private _conn: Deno.Conn | null;
-  private _reader: TextProtoReader | null;
-  private _writer: BufWriter | null;
+  #conn: Deno.Conn | null = null;
+  #reader: TextProtoReader | null = null;
+  #writer: BufWriter | null = null;
 
-  private _console_debug = false;
-  private _content_encoding: ContentTransferEncoding;
+  #console_debug = false;
+  #content_encoding: ContentTransferEncoding;
 
   constructor({
     content_encoding = ContentTransferEncoding["quoted-printable"],
     console_debug = false,
   }: SmtpClientOptions = {}) {
-    this._conn = null;
-    this._reader = null;
-    this._writer = null;
-    this._console_debug = console_debug;
+    this.#console_debug = console_debug;
 
-    const _content_encoding = String(content_encoding).toLowerCase();
+    const _content_encoding = content_encoding.toLowerCase();
+
     if (!(_content_encoding in ContentTransferEncoding)) {
       throw new Error(
-        `${JSON.stringify(content_encoding)} is not a valid content encoding`,
+        `${JSON.stringify(content_encoding)} is not a valid content encoding`
       );
     }
-    this._content_encoding = _content_encoding as ContentTransferEncoding;
+    this.#content_encoding = _content_encoding as ContentTransferEncoding;
   }
 
   async connect(config: ConnectConfig | ConnectConfigWithAuthentication) {
@@ -69,10 +67,10 @@ export class SmtpClient {
   }
 
   async close() {
-    if (!this._conn) {
+    if (!this.#conn) {
       return;
     }
-    await this._conn.close();
+    await this.#conn.close();
   }
 
   async send(config: SendConfig) {
@@ -95,7 +93,7 @@ export class SmtpClient {
     if (config.html) {
       await this.writeCmd(
         "Content-Type: multipart/alternative; boundary=AlternativeBoundary",
-        "\r\n",
+        "\r\n"
       );
       await this.writeCmd("--AlternativeBoundary");
       await this.writeCmd('Content-Type: text/plain; charset="utf-8"', "\r\n");
@@ -107,7 +105,7 @@ export class SmtpClient {
       await this.writeCmd("MIME-Version: 1.0");
       await this.writeCmd("Content-Type: text/plain;charset=utf-8");
       await this.writeCmd(
-        `Content-Transfer-Encoding: ${this._content_encoding}` + "\r\n",
+        `Content-Transfer-Encoding: ${this.#content_encoding}` + "\r\n"
       );
       await this.writeCmd(config.content, "\r\n.\r\n");
     }
@@ -116,10 +114,10 @@ export class SmtpClient {
   }
 
   private async _connect(conn: Deno.Conn, config: ConnectConfig) {
-    this._conn = conn;
-    const reader = new BufReader(this._conn);
-    this._writer = new BufWriter(this._conn);
-    this._reader = new TextProtoReader(reader);
+    this.#conn = conn;
+    const reader = new BufReader(this.#conn);
+    this.#writer = new BufWriter(this.#conn);
+    this.#reader = new TextProtoReader(reader);
 
     this.assertCode(await this.readCmd(), CommandCode.READY);
 
@@ -151,10 +149,10 @@ export class SmtpClient {
   }
 
   private async readCmd(): Promise<Command | null> {
-    if (!this._reader) {
+    if (!this.#reader) {
       return null;
     }
-    const result = await this._reader.readLine();
+    const result = await this.#reader.readLine();
     if (result === null) return null;
     const cmdCode = parseInt(result.slice(0, 3).trim());
     const cmdArgs = result.slice(3).trim();
@@ -165,21 +163,21 @@ export class SmtpClient {
   }
 
   private async writeCmd(...args: string[]) {
-    if (!this._writer) {
+    if (!this.#writer) {
       return null;
     }
 
-    if (this._console_debug) {
+    if (this.#console_debug) {
       console.table(args);
     }
 
     const data = encoder.encode([...args].join(" ") + "\r\n");
-    await this._writer.write(data);
-    await this._writer.flush();
+    await this.#writer.write(data);
+    await this.#writer.flush();
   }
 
   private useAuthentication(
-    config: ConnectConfig | ConnectConfigWithAuthentication,
+    config: ConnectConfig | ConnectConfigWithAuthentication
   ): config is ConnectConfigWithAuthentication {
     return (config as ConnectConfigWithAuthentication).username !== undefined;
   }
