@@ -177,25 +177,20 @@ export class SmtpClient {
     }
 
     await this.writeCmd("MIME-Version: 1.0");
+
     await this.writeCmd(
-      "Content-Type: multipart/alternative; boundary=AlternativeBoundary",
+      "Content-Type: multipart/mixed; boundary=attachment",
+      "\r\n"
+    );
+    await this.writeCmd("--attachment");
+
+    await this.writeCmd(
+      "Content-Type: multipart/alternative; boundary=message",
       "\r\n"
     );
 
-    // if (config.html) {
-    //   await this.writeCmd("--AlternativeBoundary");
-    //   await this.writeCmd('Content-Type: text/html; charset="utf-8"', "\r\n");
-    //   await this.writeCmd(config.html, "\r\n");
-    // }
-
-    // if (config.content) {
-    //   await this.writeCmd("--AlternativeBoundary");
-    //   await this.writeCmd('Content-Type: text/plain; charset="utf-8"', "\r\n");
-    //   await this.writeCmd(config.content, "\r\n");
-    // }
-
     for (let i = 0; i < config.mimeContent.length; i++) {
-      await this.writeCmd("--AlternativeBoundary");
+      await this.writeCmd("--message");
       await this.writeCmd(
         "Content-Type: " + config.mimeContent[i].mimeType,
         "\r\n"
@@ -203,7 +198,13 @@ export class SmtpClient {
       await this.writeCmd(config.mimeContent[i].content, "\r\n");
     }
 
-    await this.writeCmd("--AlternativeBoundary--\r\n.\r\n");
+    await this.writeCmd("--message--\r\n");
+
+    // TODO: add attachments
+
+    await this.writeCmd("--attachment--\r\n");
+
+    await this.writeCmd(".\r\n");
 
     this.assertCode(await this.readCmd(), CommandCode.OK);
   }
