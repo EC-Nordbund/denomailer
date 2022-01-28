@@ -39,7 +39,10 @@ type attachment = (
 
 type textAttachment = { encoding: "text"; content: string };
 type base64Attachment = { encoding: "base64"; content: string };
-type arrayBufferLikeAttachment = { content: ArrayBufferLike };
+type arrayBufferLikeAttachment = {
+  content: ArrayBufferLike | Uint8Array;
+  encoding: "binary";
+};
 
 interface Content {
   mimeType: string;

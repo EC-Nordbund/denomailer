@@ -10,7 +10,7 @@ import type {
   wrapedMail,
   mailString,
 } from "./config.ts";
-import { BufReader, BufWriter, TextProtoReader } from "./deps.ts";
+import { BufReader, BufWriter, TextProtoReader, base64Decode } from "./deps.ts";
 
 const encoder = new TextEncoder();
 
@@ -174,7 +174,7 @@ export class SmtpClient {
       await this.writeCmd("InReplyTo: ", config.inReplyTo);
     }
 
-    if(config.references) {
+    if (config.references) {
       await this.writeCmd("Refrences: ", config.references);
     }
 
@@ -184,11 +184,9 @@ export class SmtpClient {
       await this.writeCmd("ReplyTo: ", config.replyTo);
     }
 
-    if(config.priority) {
-      await this.writeCmd("Priority:", config.priority)
+    if (config.priority) {
+      await this.writeCmd("Priority:", config.priority);
     }
-
-    
 
     await this.writeCmd("MIME-Version: 1.0");
 
@@ -213,6 +211,48 @@ export class SmtpClient {
     }
 
     await this.writeCmd("--message--\r\n");
+
+    if (config.attachments) {
+      // Setup attachments
+      for (let i = 0; i < config.attachments.length; i++) {
+        const attachment = config.attachments[i];
+
+        await this.writeCmd("--attachment");
+        await this.writeCmd(
+          "Content-Type:",
+          attachment.contentType + ";",
+          "name=" + attachment.filename
+        );
+
+        await this.writeCmd(
+          "Content-Disposition: attachment; filename=" + attachment.filename,
+          "\r\n"
+        );
+
+        if (attachment.encoding === "binary") {
+          await this.writeCmd("Content-Transfer-Encoding: binary");
+
+          if (
+            attachment.content instanceof ArrayBuffer ||
+            attachment.content instanceof SharedArrayBuffer
+          ) {
+            await this.writeCmdBinary(new Uint8Array(attachment.content));
+          } else {
+            await this.writeCmdBinary(attachment.content);
+          }
+
+          await this.writeCmd("\r\n");
+        } else if (attachment.encoding === "text") {
+          await this.writeCmd("Content-Transfer-Encoding: quoted-printable");
+
+          await this.writeCmd(attachment.content, "\r\n");
+        } else if (attachment.encoding === "base64") {
+          await this.writeCmd("Content-Transfer-Encoding: binary");
+          await this.writeCmdBinary(base64Decode(attachment.content));
+          await this.writeCmd();
+        }
+      }
+    }
 
     // TODO: add attachments
 
@@ -307,6 +347,21 @@ export class SmtpClient {
 
     const data = encoder.encode([...args].join(" ") + "\r\n");
     await this.#writer.write(data);
+    await this.#writer.flush();
+  }
+
+  private async writeCmdBinary(...args: Uint8Array[]) {
+    if (!this.#writer) {
+      return null;
+    }
+
+    if (this.#console_debug) {
+      console.table(args.map(() => "Uint8Attay"));
+    }
+
+    for (let i = 0; i < args.length; i++) {
+      await this.#writer.write(args[i]);
+    }
     await this.#writer.flush();
   }
 
