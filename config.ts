@@ -18,8 +18,28 @@ interface SendConfig {
   content?: string;
   mimeContent?: Content[];
   html?: string;
+  inReplyTo?: string;
   replyTo?: mailString;
+  references?: string;
+  priority?: "high" | "normal" | "low";
+  attachments?: attachment[];
 }
+
+interface baseAttachment {
+  contentType: string;
+  filename: string;
+}
+
+type attachment = (
+  | textAttachment
+  | base64Attachment
+  | arrayBufferLikeAttachment
+) &
+  baseAttachment;
+
+type textAttachment = { encoding: "text"; content: string };
+type base64Attachment = { encoding: "base64"; content: string };
+type arrayBufferLikeAttachment = { content: ArrayBufferLike };
 
 interface Content {
   mimeType: string;

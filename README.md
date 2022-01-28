@@ -10,12 +10,9 @@ The following additional API are added / planed:
 - [ ] Attachments
 - [x] replyTo
 - [x] rewrite content with more options
-- [ ] ...
+- [x] priority
+- [ ] encoding tests (äöß,...) pending attachments
 
-Spam Errors (optimize so mails get a good spame score at mailtrap):
-- [ ] MIME_HEADER_CTYPE_ONLY
-- [x] fix Date
-- [ ] MISSING_MID
 
 Allowed SingleMailFormat:
 ```txt

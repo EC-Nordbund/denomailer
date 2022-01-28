@@ -170,11 +170,25 @@ export class SmtpClient {
     }
     await this.writeCmd("Date: ", date);
 
+    if (config.inReplyTo) {
+      await this.writeCmd("InReplyTo: ", config.inReplyTo);
+    }
+
+    if(config.references) {
+      await this.writeCmd("Refrences: ", config.references);
+    }
+
     if (config.replyTo) {
       config.replyTo = normaliceMailString(config.replyTo);
 
-      await this.writeCmd("Reply-To: ", config.replyTo);
+      await this.writeCmd("ReplyTo: ", config.replyTo);
     }
+
+    if(config.priority) {
+      await this.writeCmd("Priority:", config.priority)
+    }
+
+    
 
     await this.writeCmd("MIME-Version: 1.0");
 
