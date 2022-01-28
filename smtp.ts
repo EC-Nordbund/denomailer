@@ -95,6 +95,11 @@ export class SmtpClient {
     if (!config.mimeContent) {
       config.mimeContent = [];
 
+      // Allows to auto 
+      if (config.content === "auto" && config.html) {
+        config.content = config.html.replace(/<[^>]+>/g, "");
+      }
+
       if (config.content) {
         config.mimeContent.push({
           mimeType: 'text/plain; charset="utf-8"',
@@ -105,7 +110,7 @@ export class SmtpClient {
       if (config.html) {
         if (!config.content) {
           console.warn(
-            "[SMTP] We highly recomand adding a plain text content in addition to your html content!"
+            "[SMTP] We highly recomand adding a plain text content in addition to your html content! You can set content to 'auto' to do this automaticly!"
           );
         }
 
