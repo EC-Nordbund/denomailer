@@ -7,7 +7,7 @@ The following additional API are added / planed:
 - [x] to multiple mails
 - [x] cc and bcc
 - [x] STARTTLS (Thanks to @dbellingroth)
-- [ ] Attachments
+- [x] Attachments
 - [x] replyTo
 - [x] rewrite content with more options
 - [x] priority
