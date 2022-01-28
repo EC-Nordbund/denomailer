@@ -2,6 +2,15 @@
 
 > This is a WIP fork of https://github.com/manyuanrong/deno-smtp to enable better mail sending!
 
+The following additional API are added / planed:
+
+- [x] to multiple mails
+- [x] cc and bcc
+- [x] STARTTLS (Thanks to @dbellingroth)
+- [ ] Attachments
+- [ ] replyTo
+- [ ] ...
+
 <!-- [![Build Status](https://github.com/manyuanrong/deno-smtp/workflows/ci/badge.svg?branch=master)](https://github.com/manyuanrong/deno-smtp/actions)
 ![GitHub](https://img.shields.io/github/license/manyuanrong/deno-smtp.svg)
 ![GitHub release](https://img.shields.io/github/release/manyuanrong/deno-smtp.svg)
