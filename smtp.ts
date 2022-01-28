@@ -8,6 +8,7 @@ import type {
   emailWithName,
   mailListObject,
   wrapedMail,
+  mailString,
 } from "./config.ts";
 import { BufReader, BufWriter, TextProtoReader } from "./deps.ts";
 
@@ -83,7 +84,7 @@ export class SmtpClient {
 
     const to = normaliceMailList(config.to).map((m) => this.parseAddress(m));
 
-    const date = config.date ?? new Date().toString();
+    const date = config.date ?? new Date().toUTCString().split(",")[1].slice(1);
 
     await this.writeCmd("MAIL", "FROM:", from);
     this.assertCode(await this.readCmd(), CommandCode.OK);
@@ -93,9 +94,12 @@ export class SmtpClient {
       this.assertCode(await this.readCmd(), CommandCode.OK);
     }
 
-    const cc = config.cc ? normaliceMailList(config.cc) : false;
+    const cc = config.cc
+      ? normaliceMailList(config.cc).map((v) => this.parseAddress(v))
+      : false;
 
     if (cc) {
+      console.log("cc");
       for (let i = 0; i < cc.length; i++) {
         await this.writeCmd("RCPT", "TO:", cc[i][0]);
         this.assertCode(await this.readCmd(), CommandCode.OK);
@@ -103,16 +107,9 @@ export class SmtpClient {
     }
 
     if (config.bcc) {
-      const bcc = normaliceMailList(config.bcc);
-
-      for (let i = 0; i < bcc.length; i++) {
-        await this.writeCmd("RCPT", "TO:", bcc[i][0]);
-        this.assertCode(await this.readCmd(), CommandCode.OK);
-      }
-    }
-
-    if (config.bcc) {
-      const bcc = normaliceMailList(config.bcc);
+      const bcc = normaliceMailList(config.bcc).map((v) =>
+        this.parseAddress(v)
+      );
 
       for (let i = 0; i < bcc.length; i++) {
         await this.writeCmd("RCPT", "TO:", bcc[i][0]);
@@ -132,7 +129,7 @@ export class SmtpClient {
     await this.writeCmd("Date: ", date);
 
     if (config.replyTo) {
-      if (!config.replyTo.includes("<")) config.replyTo = `<${config.replyTo}>`;
+      config.replyTo = normaliceMailString(config.replyTo);
 
       await this.writeCmd("Reply-To: ", config.replyTo);
     }
@@ -256,10 +253,20 @@ export class SmtpClient {
   private parseAddress(
     email: string
   ): [wrapedMail, emailWithName | wrapedMail] {
-    const m = email.toString().match(/(.*)\s<(.*)>/);
-    return m?.length === 3
-      ? [`<${m[2]}>` as wrapedMail, email as emailWithName]
-      : [`<${email}>` as wrapedMail, `<${email}>` as wrapedMail];
+    if (email.includes("<")) {
+      const m = email.split("<")[1].split(">")[0];
+      return [`<${m}>` as wrapedMail, email as emailWithName | wrapedMail];
+    } else {
+      return [`<${email}>` as wrapedMail, `<${email}>` as wrapedMail];
+    }
+  }
+}
+
+function normaliceMailString(mail: mailString) {
+  if (mail.includes("<")) {
+    return mail as emailWithName;
+  } else {
+    return `<${mail}>` as wrapedMail;
   }
 }
 
@@ -269,11 +276,7 @@ function normaliceMailList(
   if (!mails) return [];
 
   if (typeof mails === "string") {
-    if (mails.includes("<")) {
-      return [mails as emailWithName];
-    } else {
-      return [`<${mails}>`];
-    }
+    return [normaliceMailString(mails)];
   } else if (Array.isArray(mails)) {
     return mails.map((m) => {
       if (typeof m === "string") {
