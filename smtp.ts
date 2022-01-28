@@ -88,9 +88,36 @@ export class SmtpClient {
     await this.writeCmd("MAIL", "FROM:", from);
     this.assertCode(await this.readCmd(), CommandCode.OK);
 
-    for (let i = 0; i < to.length; i++) {    
+    for (let i = 0; i < to.length; i++) {
       await this.writeCmd("RCPT", "TO:", to[i][0]);
-      this.assertCode(await this.readCmd(), CommandCode.OK);      
+      this.assertCode(await this.readCmd(), CommandCode.OK);
+    }
+
+    const cc = config.cc ? normaliceMailList(config.cc) : false;
+
+    if (cc) {
+      for (let i = 0; i < cc.length; i++) {
+        await this.writeCmd("RCPT", "TO:", cc[i][0]);
+        this.assertCode(await this.readCmd(), CommandCode.OK);
+      }
+    }
+
+    if (config.bcc) {
+      const bcc = normaliceMailList(config.bcc);
+
+      for (let i = 0; i < bcc.length; i++) {
+        await this.writeCmd("RCPT", "TO:", bcc[i][0]);
+        this.assertCode(await this.readCmd(), CommandCode.OK);
+      }
+    }
+
+    if (config.bcc) {
+      const bcc = normaliceMailList(config.bcc);
+
+      for (let i = 0; i < bcc.length; i++) {
+        await this.writeCmd("RCPT", "TO:", bcc[i][0]);
+        this.assertCode(await this.readCmd(), CommandCode.OK);
+      }
     }
 
     await this.writeCmd("DATA");
@@ -98,7 +125,10 @@ export class SmtpClient {
 
     await this.writeCmd("Subject: ", config.subject);
     await this.writeCmd("From: ", fromData);
-    await this.writeCmd("To: ", to.map(v=>v[1]).join(';'));
+    await this.writeCmd("To: ", to.map((v) => v[1]).join(";"));
+    if (cc) {
+      await this.writeCmd("Cc: ", cc.map((v) => v[1]).join(";"));
+    }
     await this.writeCmd("Date: ", date);
 
     if (config.html) {

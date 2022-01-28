@@ -10,6 +10,8 @@ interface ConnectConfigWithAuthentication extends ConnectConfig {
 
 interface SendConfig {
   to: mailList;
+  cc?: mailList;
+  bcc?: mailList;
   from: string;
   date?: string;
   subject: string;
