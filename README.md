@@ -17,6 +17,20 @@ Spam Errors (optimize so mails get a good spame score at mailtrap):
 - [x] fix Date
 - [ ] MISSING_MID
 
+Allowed SingleMailFormat:
+```txt
+name@example.de
+<name@example.de>
+NAME <name@example.de>
+{mail: "name@example.de"}
+{mail: "name@example.de", name: "NAME"}
+```
+
+For to, cc, bcc you can provide one of the above OR a array of the above OR a object: {"NAME": "name@example.de"} where the name maps to the mail.
+
+
+
+
 <!-- [![Build Status](https://github.com/manyuanrong/deno-smtp/workflows/ci/badge.svg?branch=master)](https://github.com/manyuanrong/deno-smtp/actions)
 ![GitHub](https://img.shields.io/github/license/manyuanrong/deno-smtp.svg)
 ![GitHub release](https://img.shields.io/github/release/manyuanrong/deno-smtp.svg)
