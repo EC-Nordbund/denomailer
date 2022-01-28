@@ -8,7 +8,7 @@ The following additional API are added / planed:
 - [x] cc and bcc
 - [x] STARTTLS (Thanks to @dbellingroth)
 - [ ] Attachments
-- [ ] replyTo
+- [x] replyTo
 - [ ] ...
 
 <!-- [![Build Status](https://github.com/manyuanrong/deno-smtp/workflows/ci/badge.svg?branch=master)](https://github.com/manyuanrong/deno-smtp/actions)

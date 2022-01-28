@@ -131,6 +131,12 @@ export class SmtpClient {
     }
     await this.writeCmd("Date: ", date);
 
+    if (config.replyTo) {
+      if (!config.replyTo.includes("<")) config.replyTo = `<${config.replyTo}>`;
+
+      await this.writeCmd("Reply-To: ", config.replyTo);
+    }
+
     if (config.html) {
       await this.writeCmd(
         "Content-Type: multipart/alternative; boundary=AlternativeBoundary",

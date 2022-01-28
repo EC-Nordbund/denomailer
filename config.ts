@@ -17,8 +17,10 @@ interface SendConfig {
   subject: string;
   content: string;
   html?: string;
+  replyTo?: mailString;
 }
 
+export type mailString = email | emailWithName | wrapedMail;
 export type email = `${string}@${string}.${string}`;
 export type emailWithName = `${string} <${email}>`;
 export type wrapedMail = `<${email}>`;
@@ -28,7 +30,7 @@ export interface mailObject {
   name?: string;
 }
 
-export type mail = email | emailWithName | mailObject | wrapedMail;
+export type mail = mailString | mailObject;
 export type mailListObject = Omit<Record<string, email>, "name" | "mail">;
 export type mailList = mailListObject | mail[] | mail;
 
