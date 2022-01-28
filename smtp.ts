@@ -3,6 +3,11 @@ import type {
   ConnectConfig,
   ConnectConfigWithAuthentication,
   SendConfig,
+  mailList,
+  email,
+  emailWithName,
+  mailListObject,
+  wrapedMail,
 } from "./config.ts";
 import { BufReader, BufWriter, TextProtoReader } from "./deps.ts";
 
@@ -75,19 +80,25 @@ export class SmtpClient {
 
   async send(config: SendConfig) {
     const [from, fromData] = this.parseAddress(config.from);
-    const [to, toData] = this.parseAddress(config.to);
+
+    const to = normaliceMailList(config.to).map((m) => this.parseAddress(m));
+
     const date = config.date ?? new Date().toString();
 
     await this.writeCmd("MAIL", "FROM:", from);
     this.assertCode(await this.readCmd(), CommandCode.OK);
-    await this.writeCmd("RCPT", "TO:", to);
-    this.assertCode(await this.readCmd(), CommandCode.OK);
+
+    for (let i = 0; i < to.length; i++) {    
+      await this.writeCmd("RCPT", "TO:", to[i][0]);
+      this.assertCode(await this.readCmd(), CommandCode.OK);      
+    }
+
     await this.writeCmd("DATA");
     this.assertCode(await this.readCmd(), CommandCode.BEGIN_DATA);
 
     await this.writeCmd("Subject: ", config.subject);
     await this.writeCmd("From: ", fromData);
-    await this.writeCmd("To: ", toData);
+    await this.writeCmd("To: ", to.map(v=>v[1]).join(';'));
     await this.writeCmd("Date: ", date);
 
     if (config.html) {
@@ -122,8 +133,6 @@ export class SmtpClient {
     this.assertCode(await this.readCmd(), CommandCode.READY);
 
     await this.writeCmd("EHLO", config.hostname);
-    
-
 
     let startTLS = false;
 
@@ -208,10 +217,50 @@ export class SmtpClient {
     return (config as ConnectConfigWithAuthentication).username !== undefined;
   }
 
-  private parseAddress(email: string): [string, string] {
+  private parseAddress(
+    email: string
+  ): [wrapedMail, emailWithName | wrapedMail] {
     const m = email.toString().match(/(.*)\s<(.*)>/);
     return m?.length === 3
-      ? [`<${m[2]}>`, email]
-      : [`<${email}>`, `<${email}>`];
+      ? [`<${m[2]}>` as wrapedMail, email as emailWithName]
+      : [`<${email}>` as wrapedMail, `<${email}>` as wrapedMail];
+  }
+}
+
+function normaliceMailList(
+  mails?: mailList | null
+): (emailWithName | wrapedMail)[] {
+  if (!mails) return [];
+
+  if (typeof mails === "string") {
+    if (mails.includes("<")) {
+      return [mails as emailWithName];
+    } else {
+      return [`<${mails}>`];
+    }
+  } else if (Array.isArray(mails)) {
+    return mails.map((m) => {
+      if (typeof m === "string") {
+        if (m.includes("<")) {
+          return m as emailWithName;
+        } else {
+          return `<${m}>` as emailWithName;
+        }
+      } else {
+        return m.name
+          ? (`${m.name} <${m.mail}>` as emailWithName)
+          : (`<${m.mail}>` as emailWithName);
+      }
+    });
+  } else if (mails.mail) {
+    return [
+      mails.name
+        ? (`${mails.name} <${mails.mail}>` as emailWithName)
+        : (`<${mails.mail}>` as emailWithName),
+    ];
+  } else {
+    return Object.entries(mails as mailListObject).map(
+      ([name, mail]: [string, email]) => `${name} <${mail}>` as emailWithName
+    );
   }
 }
