@@ -1,6 +1,6 @@
 ## Deno SMTP mail client
 
-> This is a WIP fork of https://github.com/manyuanrong/deno-smtp to enable better mail sending!
+> This is a WIP fork of the (dead?) https://github.com/manyuanrong/deno-smtp to enable better mail sending!
 
 The following additional API are added / planed:
 
