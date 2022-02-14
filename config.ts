@@ -49,18 +49,55 @@ interface Content {
   content: string;
 }
 
-export type mailString = email | emailWithName | wrapedMail;
-export type email = `${string}@${string}.${string}`;
-export type emailWithName = `${string} <${email}>`;
-export type wrapedMail = `<${email}>`;
+export type mailString = string;
+export type email = string;
+export type emailWithName = string;
+export type wrapedMail = string;
 
 export interface mailObject {
-  mail: email;
+  mail: string;
   name?: string;
 }
 
-export type mail = mailString | mailObject;
+export type mail = string | mailObject;
 export type mailListObject = Omit<Record<string, email>, "name" | "mail">;
 export type mailList = mailListObject | mail[] | mail;
 
 export type { ConnectConfig, ConnectConfigWithAuthentication, SendConfig };
+
+function isMail(mail: string) {
+  return /[^<>()\[\]\\,;:\s@"]+@[a-zA-Z0-9]+\.([a-zA-Z0-9\-]+\.)*[a-zA-Z]{2,}$/.test(mail)
+}
+
+function isSingleMail(mail:string) {
+  return /^(([^<>()\[\]\\,;:\s@"]+@[a-zA-Z0-9]+\.([a-zA-Z0-9\-]+\.)*[a-zA-Z]{2,})|(<[^<>()\[\]\\,;:\s@"]+@[a-zA-Z0-9]+\.([a-zA-Z0-9\-]+\.)*[a-zA-Z]{2,}>)|([^<>]+ <[^<>()\[\]\\,;:\s@"]+@[a-zA-Z0-9]+\.([a-zA-Z0-9\-]+\.)*[a-zA-Z]{2,}>))$/.test(mail)
+}
+
+export function validateConfig(config: SendConfig) {
+  if(config.from) {
+    if(!isSingleMail(config.from)) throw new Error("Mail From is not a valid E-Mail.");
+  }
+
+  if(!validateMailList(config.to)) throw new Error("Mail TO is not a valid E-Mail.");
+  
+
+  if(config.cc && !validateMailList(config.cc))  throw new Error("Mail CC is not a valid E-Mail.");
+  if(config.bcc && !validateMailList(config.bcc))  throw new Error("Mail BCC is not a valid E-Mail.");
+
+  if(config.replyTo && !isSingleMail(config.replyTo)) throw new Error("Mail ReplyTo is not a valid E-Mail.");
+
+  return true;
+}
+
+function validateMailList(mailList: mailList) {
+  if(typeof mailList === 'string') return isSingleMail(mailList)
+
+  if(Array.isArray(mailList)) return !mailList.some(m => {
+    if(typeof m === 'string') return !isSingleMail(m);
+    return !isMail(m.mail)
+  })
+
+  if((Object.keys(mailList).length === 1 && mailList.mail )|| (Object.keys(mailList).length === 2 && mailList.mail && mailList.name)) return isMail(mailList.mail)
+
+  return !Object.values(mailList).some(m => !isSingleMail(m))
+}

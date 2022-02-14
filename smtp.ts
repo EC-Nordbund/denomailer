@@ -4,12 +4,9 @@ import type {
   ConnectConfigWithAuthentication,
   SendConfig,
   mailList,
-  email,
-  emailWithName,
   mailListObject,
-  wrapedMail,
-  mailString,
 } from "./config.ts";
+import {validateConfig} from "./config.ts";
 import { BufReader, BufWriter, TextProtoReader, base64Decode } from "./deps.ts";
 
 const encoder = new TextEncoder();
@@ -80,6 +77,9 @@ export class SmtpClient {
   }
 
   async send(config: SendConfig) {
+    validateConfig(config)
+
+
     const [from, fromData] = this.parseAddress(config.from);
 
     const to = normaliceMailList(config.to).map((m) => this.parseAddress(m));
@@ -373,27 +373,27 @@ export class SmtpClient {
 
   private parseAddress(
     email: string
-  ): [wrapedMail, emailWithName | wrapedMail] {
+  ): [string, string] {
     if (email.includes("<")) {
       const m = email.split("<")[1].split(">")[0];
-      return [`<${m}>` as wrapedMail, email as emailWithName | wrapedMail];
+      return [`<${m}>`, email];
     } else {
-      return [`<${email}>` as wrapedMail, `<${email}>` as wrapedMail];
+      return [`<${email}>`, `<${email}>`];
     }
   }
 }
 
-function normaliceMailString(mail: mailString) {
+function normaliceMailString(mail: string) {
   if (mail.includes("<")) {
-    return mail as emailWithName;
+    return mail;
   } else {
-    return `<${mail}>` as wrapedMail;
+    return `<${mail}>`;
   }
 }
 
 function normaliceMailList(
   mails?: mailList | null
-): (emailWithName | wrapedMail)[] {
+): string[] {
   if (!mails) return [];
 
   if (typeof mails === "string") {
@@ -402,25 +402,25 @@ function normaliceMailList(
     return mails.map((m) => {
       if (typeof m === "string") {
         if (m.includes("<")) {
-          return m as emailWithName;
+          return m;
         } else {
-          return `<${m}>` as emailWithName;
+          return `<${m}>`;
         }
       } else {
         return m.name
-          ? (`${m.name} <${m.mail}>` as emailWithName)
-          : (`<${m.mail}>` as emailWithName);
+          ? (`${m.name} <${m.mail}>`)
+          : (`<${m.mail}>`);
       }
     });
   } else if (mails.mail) {
     return [
       mails.name
-        ? (`${mails.name} <${mails.mail}>` as emailWithName)
-        : (`<${mails.mail}>` as emailWithName),
+        ? (`${mails.name} <${mails.mail}>`)
+        : (`<${mails.mail}>`),
     ];
   } else {
     return Object.entries(mails as mailListObject).map(
-      ([name, mail]: [string, email]) => `${name} <${mail}>` as emailWithName
+      ([name, mail]: [string, string]) => `${name} <${mail}>`
     );
   }
 }
