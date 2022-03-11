@@ -3,7 +3,9 @@ export { base64Decode } from "./deps.ts";
 const encoder = new TextEncoder();
 
 export function quotedPrintableEncode(data: string, encLB = false) {
-  data = data.replaceAll(" \r\n", "=20\r\n").replaceAll(" \n", "=20\n");
+  if(!encLB) {
+    data = data.replaceAll(" \r\n", "=20\r\n").replaceAll(" \n", "=20\n");
+  }
 
   const encodedData = Array.from(data).map((ch) => {
     // For each char check decoding
