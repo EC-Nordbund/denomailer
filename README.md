@@ -1,6 +1,7 @@
 ## Deno SMTP mail client
 
-> This is a WIP fork of the (dead?) https://github.com/manyuanrong/deno-smtp to enable better mail sending!
+> This is a WIP fork of the (dead?) https://github.com/manyuanrong/deno-smtp to
+> enable better mail sending!
 
 The following additional API are added / planed:
 
@@ -15,8 +16,8 @@ The following additional API are added / planed:
 - [ ] fix race condition
 - [ ] encoding tests (äöß,...) pending attachments
 
-
 Allowed SingleMailFormat:
+
 ```txt
 name@example.de
 <name@example.de>
@@ -25,13 +26,19 @@ NAME <name@example.de>
 {mail: "name@example.de", name: "NAME"}
 ```
 
-For to, cc, bcc you can provide one of the above OR a array of the above OR a object: {"NAME": "name@example.de"} where the name maps to the mail.
+For to, cc, bcc you can provide one of the above OR a array of the above OR a
+object: {"NAME": "name@example.de"} where the name maps to the mail.
 
 ### IMPORTANT SECURITY INFORMATION
-PLEASE update to a version >= 0.8! 0.8 has a problem where malformed mails could potatialy allow attackers to create a mail (with linebreaks) to send unwanted SMTP commands. This could result in authentic phishing attacks! Whith no way for the user to identify that this is a phishing mail! Or that this mail contains a dangorus attachment!
 
-Also make shure that Mails are sent one after the other as they can corrupt each others data!
+PLEASE update to a version >= 0.8! 0.8 has a problem where malformed mails could
+potatialy allow attackers to create a mail (with linebreaks) to send unwanted
+SMTP commands. This could result in authentic phishing attacks! Whith no way for
+the user to identify that this is a phishing mail! Or that this mail contains a
+dangorus attachment!
 
+Also make shure that Mails are sent one after the other as they can corrupt each
+others data!
 
 <!-- We use the following regex to validate a single email: `/([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)/` -->
 

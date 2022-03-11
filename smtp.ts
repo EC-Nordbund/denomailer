@@ -2,11 +2,11 @@ import { CommandCode } from "./code.ts";
 import type {
   ConnectConfig,
   ConnectConfigWithAuthentication,
-  SendConfig,
   mailList,
   mailListObject,
+  SendConfig,
 } from "./config.ts";
-import {validateConfig} from "./config.ts";
+import { validateConfig } from "./config.ts";
 import { BufReader, BufWriter, TextProtoReader } from "./deps.ts";
 import { base64Decode, quotedPrintableEncode } from "./encoding.ts";
 
@@ -31,7 +31,7 @@ interface SmtpClientOptions {
 }
 
 export class SmtpClient {
-  #secure = false
+  #secure = false;
 
   #conn: Deno.Conn | null = null;
   #reader: TextProtoReader | null = null;
@@ -41,7 +41,7 @@ export class SmtpClient {
   #content_encoding: ContentTransferEncoding;
 
   get isSecure() {
-    return this.#secure
+    return this.#secure;
   }
 
   constructor({
@@ -54,7 +54,7 @@ export class SmtpClient {
 
     if (!(_content_encoding in ContentTransferEncoding)) {
       throw new Error(
-        `${JSON.stringify(content_encoding)} is not a valid content encoding`
+        `${JSON.stringify(content_encoding)} is not a valid content encoding`,
       );
     }
     this.#content_encoding = _content_encoding as ContentTransferEncoding;
@@ -73,7 +73,7 @@ export class SmtpClient {
       hostname: config.hostname,
       port: config.port || 465,
     });
-    this.#secure = true
+    this.#secure = true;
     await this.#connect(conn, config);
   }
 
@@ -84,56 +84,56 @@ export class SmtpClient {
     await this.#conn.close();
   }
 
-  #currentlySending = false
-  #sending: (() => void)[] = []
+  #currentlySending = false;
+  #sending: (() => void)[] = [];
 
   #cueSending() {
-    if(!this.#currentlySending) {
-      this.#currentlySending = true
-      return
+    if (!this.#currentlySending) {
+      this.#currentlySending = true;
+      return;
     }
 
     return new Promise<void>((res) => {
       this.#sending.push(() => {
-        this.#currentlySending = true
-        res()
-      })
-    })
+        this.#currentlySending = true;
+        res();
+      });
+    });
   }
 
   #queNextSending() {
-    if(this.#sending.length === 0) {
-      this.#currentlySending = false
-      return
+    if (this.#sending.length === 0) {
+      this.#currentlySending = false;
+      return;
     }
 
-    const run = this.#sending[0]    
+    const run = this.#sending[0];
 
-    this.#sending.splice(0,1)
+    this.#sending.splice(0, 1);
 
-    Promise.resolve().then(() => run())
+    Promise.resolve().then(() => run());
   }
 
   async send(config: SendConfig) {
     try {
-      await this.#cueSending()
+      await this.#cueSending();
 
-      if((config.onlySecure ?? true) && !this.#secure) {
+      if ((config.onlySecure ?? true) && !this.#secure) {
         throw new Error("The connection is not secured with STARTTLS nor TLS");
       }
 
-      validateConfig(config)
-
+      validateConfig(config);
 
       const [from, fromData] = this.parseAddress(config.from);
 
       const to = normaliceMailList(config.to).map((m) => this.parseAddress(m));
 
-      const date = config.date ?? new Date().toUTCString().split(",")[1].slice(1);
+      const date = config.date ??
+        new Date().toUTCString().split(",")[1].slice(1);
 
       if (config.mimeContent && (config.html || config.content)) {
         throw new Error(
-          "You should not use mimeContent together with html or content option!"
+          "You should not use mimeContent together with html or content option!",
         );
       }
 
@@ -152,7 +152,7 @@ export class SmtpClient {
           config.mimeContent.push({
             mimeType: 'text/plain; charset="utf-8"',
             content: quotedPrintableEncode(config.content),
-            transferEncoding: 'quoted-printable',
+            transferEncoding: "quoted-printable",
           });
         }
 
@@ -163,14 +163,14 @@ export class SmtpClient {
         if (config.html) {
           if (!config.content) {
             console.warn(
-              "[SMTP] We highly recomand adding a plain text content in addition to your html content! You can set content to 'auto' to do this automaticly!"
+              "[SMTP] We highly recomand adding a plain text content in addition to your html content! You can set content to 'auto' to do this automaticly!",
             );
           }
 
           config.mimeContent.push({
             mimeType: 'text/html; charset="utf-8"',
             content: quotedPrintableEncode(config.html),
-            transferEncoding: 'quoted-printable',
+            transferEncoding: "quoted-printable",
           });
         }
       }
@@ -243,13 +243,13 @@ export class SmtpClient {
 
       await this.writeCmd(
         "Content-Type: multipart/mixed; boundary=attachment",
-        "\r\n"
+        "\r\n",
       );
       await this.writeCmd("--attachment");
 
       await this.writeCmd(
         "Content-Type: multipart/alternative; boundary=message",
-        "\r\n"
+        "\r\n",
       );
 
       for (let i = 0; i < config.mimeContent.length; i++) {
@@ -257,15 +257,17 @@ export class SmtpClient {
         await this.writeCmd(
           "Content-Type: " + config.mimeContent[i].mimeType,
         );
-        if(config.mimeContent[i].transferEncoding) {
+        if (config.mimeContent[i].transferEncoding) {
           await this.writeCmd(
-            `Content-Transfer-Encoding: ${config.mimeContent[i].transferEncoding}` + "\r\n",
+            `Content-Transfer-Encoding: ${
+              config.mimeContent[i].transferEncoding
+            }` + "\r\n",
           );
         } else {
           // Send new line
-          await this.writeCmd('')
+          await this.writeCmd("");
         }
-        
+
         await this.writeCmd(config.mimeContent[i].content, "\r\n");
       }
 
@@ -280,12 +282,12 @@ export class SmtpClient {
           await this.writeCmd(
             "Content-Type:",
             attachment.contentType + ";",
-            "name=" + attachment.filename
+            "name=" + attachment.filename,
           );
 
           await this.writeCmd(
             "Content-Disposition: attachment; filename=" + attachment.filename,
-            "\r\n"
+            "\r\n",
           );
 
           if (attachment.encoding === "binary") {
@@ -318,12 +320,12 @@ export class SmtpClient {
       await this.writeCmd(".\r\n");
 
       this.assertCode(await this.readCmd(), CommandCode.OK);
-    } catch(ex) {
-      this.#queNextSending()
-      throw ex
+    } catch (ex) {
+      this.#queNextSending();
+      throw ex;
     }
 
-    this.#queNextSending()
+    this.#queNextSending();
   }
 
   async #connect(conn: Deno.Conn, config: ConnectConfig) {
@@ -352,7 +354,7 @@ export class SmtpClient {
         hostname: config.hostname,
       });
 
-      this.#secure = true
+      this.#secure = true;
 
       const reader = new BufReader(this.#conn);
       this.#writer = new BufWriter(this.#conn);
@@ -431,13 +433,13 @@ export class SmtpClient {
   }
 
   private useAuthentication(
-    config: ConnectConfig | ConnectConfigWithAuthentication
+    config: ConnectConfig | ConnectConfigWithAuthentication,
   ): config is ConnectConfigWithAuthentication {
     return (config as ConnectConfigWithAuthentication).username !== undefined;
   }
 
   private parseAddress(
-    email: string
+    email: string,
   ): [string, string] {
     if (email.includes("<")) {
       const m = email.split("<")[1].split(">")[0];
@@ -457,7 +459,7 @@ function normaliceMailString(mail: string) {
 }
 
 function normaliceMailList(
-  mails?: mailList | null
+  mails?: mailList | null,
 ): string[] {
   if (!mails) return [];
 
@@ -472,20 +474,16 @@ function normaliceMailList(
           return `<${m}>`;
         }
       } else {
-        return m.name
-          ? (`${m.name} <${m.mail}>`)
-          : (`<${m.mail}>`);
+        return m.name ? (`${m.name} <${m.mail}>`) : (`<${m.mail}>`);
       }
     });
   } else if (mails.mail) {
     return [
-      mails.name
-        ? (`${mails.name} <${mails.mail}>`)
-        : (`<${mails.mail}>`),
+      mails.name ? (`${mails.name} <${mails.mail}>`) : (`<${mails.mail}>`),
     ];
   } else {
     return Object.entries(mails as mailListObject).map(
-      ([name, mail]: [string, string]) => `${name} <${mail}>`
+      ([name, mail]: [string, string]) => `${name} <${mail}>`,
     );
   }
 }
