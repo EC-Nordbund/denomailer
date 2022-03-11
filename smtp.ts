@@ -30,12 +30,18 @@ interface SmtpClientOptions {
 }
 
 export class SmtpClient {
+  #secure = false
+
   #conn: Deno.Conn | null = null;
   #reader: TextProtoReader | null = null;
   #writer: BufWriter | null = null;
 
   #console_debug = false;
   #content_encoding: ContentTransferEncoding;
+
+  get isSecure() {
+    return this.#secure
+  }
 
   constructor({
     content_encoding = ContentTransferEncoding["quoted-printable"],
@@ -66,6 +72,7 @@ export class SmtpClient {
       hostname: config.hostname,
       port: config.port || 465,
     });
+    this.#secure = true
     await this.#connect(conn, config);
   }
 
@@ -77,6 +84,10 @@ export class SmtpClient {
   }
 
   async send(config: SendConfig) {
+    if((config.onlySecure ?? true) && !this.#secure) {
+      throw new Error("The connection is not secured with STARTTLS nor TLS");
+    }
+
     validateConfig(config)
 
 
@@ -288,6 +299,8 @@ export class SmtpClient {
       this.#conn = await Deno.startTls(this.#conn, {
         hostname: config.hostname,
       });
+
+      this.#secure = true
 
       const reader = new BufReader(this.#conn);
       this.#writer = new BufWriter(this.#conn);
