@@ -3,7 +3,9 @@ export { base64Decode } from "./deps.ts";
 const encoder = new TextEncoder();
 
 export function quotedPrintableEncode(data: string, encLB = false) {
-  const encodedData = Array.from(data).map((ch, i) => {
+  data = data.replaceAll(" \r\n", "=20\r\n").replaceAll(" \n", "=20\n");
+
+  const encodedData = Array.from(data).map((ch) => {
     // For each char check decoding
     const encodedChar = encoder.encode(ch);
 
@@ -12,15 +14,7 @@ export function quotedPrintableEncode(data: string, encLB = false) {
 
       if (!encLB && (code === 10 || code === 13)) return ch;
       if (code === 9) return ch;
-      if (code > 32 && code <= 126 && code !== 61) return ch;
-
-      if (code === 32) {
-        // When LB after space escape it!
-        if (!encLB && (data[i + 1] === "\r" || data[i + 1] === "\n")) {
-          return "=20";
-        }
-        return " ";
-      }
+      if (code >= 32 && code <= 126 && code !== 61) return ch;
     }
 
     let enc = "";
