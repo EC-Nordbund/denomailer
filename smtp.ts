@@ -83,195 +83,234 @@ export class SmtpClient {
     await this.#conn.close();
   }
 
+  #currentlySending = false
+  #sending: (() => void)[] = []
+
+  #cueSending() {
+    if(!this.#currentlySending) {
+      this.#currentlySending = true
+      return
+    }
+
+    return new Promise<void>((res) => {
+      this.#sending.push(() => {
+        this.#currentlySending = true
+        res()
+      })
+    })
+  }
+
+  #queNextSending() {
+    if(this.#sending.length === 0) {
+      this.#currentlySending = false
+      return
+    }
+
+    const run = this.#sending[0]    
+
+    this.#sending.splice(0,1)
+
+    Promise.resolve().then(() => run())
+  }
+
   async send(config: SendConfig) {
-    if((config.onlySecure ?? true) && !this.#secure) {
-      throw new Error("The connection is not secured with STARTTLS nor TLS");
-    }
+    try {
+      await this.#cueSending()
 
-    validateConfig(config)
-
-
-    const [from, fromData] = this.parseAddress(config.from);
-
-    const to = normaliceMailList(config.to).map((m) => this.parseAddress(m));
-
-    const date = config.date ?? new Date().toUTCString().split(",")[1].slice(1);
-
-    if (config.mimeContent && (config.html || config.content)) {
-      throw new Error(
-        "You should not use mimeContent together with html or content option!"
-      );
-    }
-
-    if (!config.mimeContent) {
-      config.mimeContent = [];
-
-      // Allows to auto
-      if (config.content === "auto" && config.html) {
-        config.content = config.html
-          .replace(/<head((.|\n|\r)*?)<\/head>/g, "")
-          .replace(/<style((.|\n|\r)*?)<\/style>/g, "")
-          .replace(/<[^>]+>/g, "");
+      if((config.onlySecure ?? true) && !this.#secure) {
+        throw new Error("The connection is not secured with STARTTLS nor TLS");
       }
 
-      if (config.content) {
-        config.mimeContent.push({
-          mimeType: 'text/plain; charset="utf-8"',
-          content: config.content,
-        });
+      validateConfig(config)
+
+
+      const [from, fromData] = this.parseAddress(config.from);
+
+      const to = normaliceMailList(config.to).map((m) => this.parseAddress(m));
+
+      const date = config.date ?? new Date().toUTCString().split(",")[1].slice(1);
+
+      if (config.mimeContent && (config.html || config.content)) {
+        throw new Error(
+          "You should not use mimeContent together with html or content option!"
+        );
       }
 
-      if (config.html) {
-        if (!config.content) {
-          console.warn(
-            "[SMTP] We highly recomand adding a plain text content in addition to your html content! You can set content to 'auto' to do this automaticly!"
-          );
+      if (!config.mimeContent) {
+        config.mimeContent = [];
+
+        // Allows to auto
+        if (config.content === "auto" && config.html) {
+          config.content = config.html
+            .replace(/<head((.|\n|\r)*?)<\/head>/g, "")
+            .replace(/<style((.|\n|\r)*?)<\/style>/g, "")
+            .replace(/<[^>]+>/g, "");
         }
 
-        config.mimeContent.push({
-          mimeType: 'text/html; charset="utf-8"',
-          content: config.html,
-        });
-      }
-    }
+        if (config.content) {
+          config.mimeContent.push({
+            mimeType: 'text/plain; charset="utf-8"',
+            content: config.content,
+          });
+        }
 
-    if (config.mimeContent.length === 0) {
-      throw new Error("No Content provided!");
-    }
-
-    await this.writeCmd("MAIL", "FROM:", from);
-    this.assertCode(await this.readCmd(), CommandCode.OK);
-
-    for (let i = 0; i < to.length; i++) {
-      await this.writeCmd("RCPT", "TO:", to[i][0]);
-      this.assertCode(await this.readCmd(), CommandCode.OK);
-    }
-
-    const cc = config.cc
-      ? normaliceMailList(config.cc).map((v) => this.parseAddress(v))
-      : false;
-
-    if (cc) {
-      console.log("cc");
-      for (let i = 0; i < cc.length; i++) {
-        await this.writeCmd("RCPT", "TO:", cc[i][0]);
-        this.assertCode(await this.readCmd(), CommandCode.OK);
-      }
-    }
-
-    if (config.bcc) {
-      const bcc = normaliceMailList(config.bcc).map((v) =>
-        this.parseAddress(v)
-      );
-
-      for (let i = 0; i < bcc.length; i++) {
-        await this.writeCmd("RCPT", "TO:", bcc[i][0]);
-        this.assertCode(await this.readCmd(), CommandCode.OK);
-      }
-    }
-
-    await this.writeCmd("DATA");
-    this.assertCode(await this.readCmd(), CommandCode.BEGIN_DATA);
-
-    await this.writeCmd("Subject: ", config.subject);
-    await this.writeCmd("From: ", fromData);
-    await this.writeCmd("To: ", to.map((v) => v[1]).join(";"));
-    if (cc) {
-      await this.writeCmd("Cc: ", cc.map((v) => v[1]).join(";"));
-    }
-    await this.writeCmd("Date: ", date);
-
-    if (config.inReplyTo) {
-      await this.writeCmd("InReplyTo: ", config.inReplyTo);
-    }
-
-    if (config.references) {
-      await this.writeCmd("Refrences: ", config.references);
-    }
-
-    if (config.replyTo) {
-      config.replyTo = normaliceMailString(config.replyTo);
-
-      await this.writeCmd("ReplyTo: ", config.replyTo);
-    }
-
-    if (config.priority) {
-      await this.writeCmd("Priority:", config.priority);
-    }
-
-    await this.writeCmd("MIME-Version: 1.0");
-
-    await this.writeCmd(
-      "Content-Type: multipart/mixed; boundary=attachment",
-      "\r\n"
-    );
-    await this.writeCmd("--attachment");
-
-    await this.writeCmd(
-      "Content-Type: multipart/alternative; boundary=message",
-      "\r\n"
-    );
-
-    for (let i = 0; i < config.mimeContent.length; i++) {
-      await this.writeCmd("--message");
-      await this.writeCmd(
-        "Content-Type: " + config.mimeContent[i].mimeType,
-        "\r\n"
-      );
-      await this.writeCmd(config.mimeContent[i].content, "\r\n");
-    }
-
-    await this.writeCmd("--message--\r\n");
-
-    if (config.attachments) {
-      // Setup attachments
-      for (let i = 0; i < config.attachments.length; i++) {
-        const attachment = config.attachments[i];
-
-        await this.writeCmd("--attachment");
-        await this.writeCmd(
-          "Content-Type:",
-          attachment.contentType + ";",
-          "name=" + attachment.filename
-        );
-
-        await this.writeCmd(
-          "Content-Disposition: attachment; filename=" + attachment.filename,
-          "\r\n"
-        );
-
-        if (attachment.encoding === "binary") {
-          await this.writeCmd("Content-Transfer-Encoding: binary");
-
-          if (
-            attachment.content instanceof ArrayBuffer ||
-            attachment.content instanceof SharedArrayBuffer
-          ) {
-            await this.writeCmdBinary(new Uint8Array(attachment.content));
-          } else {
-            await this.writeCmdBinary(attachment.content);
+        if (config.html) {
+          if (!config.content) {
+            console.warn(
+              "[SMTP] We highly recomand adding a plain text content in addition to your html content! You can set content to 'auto' to do this automaticly!"
+            );
           }
 
-          await this.writeCmd("\r\n");
-        } else if (attachment.encoding === "text") {
-          await this.writeCmd("Content-Transfer-Encoding: quoted-printable");
-
-          await this.writeCmd(attachment.content, "\r\n");
-        } else if (attachment.encoding === "base64") {
-          await this.writeCmd("Content-Transfer-Encoding: binary");
-          await this.writeCmdBinary(base64Decode(attachment.content));
-          await this.writeCmd();
+          config.mimeContent.push({
+            mimeType: 'text/html; charset="utf-8"',
+            content: config.html,
+          });
         }
       }
+
+      if (config.mimeContent.length === 0) {
+        throw new Error("No Content provided!");
+      }
+
+      await this.writeCmd("MAIL", "FROM:", from);
+      this.assertCode(await this.readCmd(), CommandCode.OK);
+
+      for (let i = 0; i < to.length; i++) {
+        await this.writeCmd("RCPT", "TO:", to[i][0]);
+        this.assertCode(await this.readCmd(), CommandCode.OK);
+      }
+
+      const cc = config.cc
+        ? normaliceMailList(config.cc).map((v) => this.parseAddress(v))
+        : false;
+
+      if (cc) {
+        console.log("cc");
+        for (let i = 0; i < cc.length; i++) {
+          await this.writeCmd("RCPT", "TO:", cc[i][0]);
+          this.assertCode(await this.readCmd(), CommandCode.OK);
+        }
+      }
+
+      if (config.bcc) {
+        const bcc = normaliceMailList(config.bcc).map((v) =>
+          this.parseAddress(v)
+        );
+
+        for (let i = 0; i < bcc.length; i++) {
+          await this.writeCmd("RCPT", "TO:", bcc[i][0]);
+          this.assertCode(await this.readCmd(), CommandCode.OK);
+        }
+      }
+
+      await this.writeCmd("DATA");
+      this.assertCode(await this.readCmd(), CommandCode.BEGIN_DATA);
+
+      await this.writeCmd("Subject: ", config.subject);
+      await this.writeCmd("From: ", fromData);
+      await this.writeCmd("To: ", to.map((v) => v[1]).join(";"));
+      if (cc) {
+        await this.writeCmd("Cc: ", cc.map((v) => v[1]).join(";"));
+      }
+      await this.writeCmd("Date: ", date);
+
+      if (config.inReplyTo) {
+        await this.writeCmd("InReplyTo: ", config.inReplyTo);
+      }
+
+      if (config.references) {
+        await this.writeCmd("Refrences: ", config.references);
+      }
+
+      if (config.replyTo) {
+        config.replyTo = normaliceMailString(config.replyTo);
+
+        await this.writeCmd("ReplyTo: ", config.replyTo);
+      }
+
+      if (config.priority) {
+        await this.writeCmd("Priority:", config.priority);
+      }
+
+      await this.writeCmd("MIME-Version: 1.0");
+
+      await this.writeCmd(
+        "Content-Type: multipart/mixed; boundary=attachment",
+        "\r\n"
+      );
+      await this.writeCmd("--attachment");
+
+      await this.writeCmd(
+        "Content-Type: multipart/alternative; boundary=message",
+        "\r\n"
+      );
+
+      for (let i = 0; i < config.mimeContent.length; i++) {
+        await this.writeCmd("--message");
+        await this.writeCmd(
+          "Content-Type: " + config.mimeContent[i].mimeType,
+          "\r\n"
+        );
+        await this.writeCmd(config.mimeContent[i].content, "\r\n");
+      }
+
+      await this.writeCmd("--message--\r\n");
+
+      if (config.attachments) {
+        // Setup attachments
+        for (let i = 0; i < config.attachments.length; i++) {
+          const attachment = config.attachments[i];
+
+          await this.writeCmd("--attachment");
+          await this.writeCmd(
+            "Content-Type:",
+            attachment.contentType + ";",
+            "name=" + attachment.filename
+          );
+
+          await this.writeCmd(
+            "Content-Disposition: attachment; filename=" + attachment.filename,
+            "\r\n"
+          );
+
+          if (attachment.encoding === "binary") {
+            await this.writeCmd("Content-Transfer-Encoding: binary");
+
+            if (
+              attachment.content instanceof ArrayBuffer ||
+              attachment.content instanceof SharedArrayBuffer
+            ) {
+              await this.writeCmdBinary(new Uint8Array(attachment.content));
+            } else {
+              await this.writeCmdBinary(attachment.content);
+            }
+
+            await this.writeCmd("\r\n");
+          } else if (attachment.encoding === "text") {
+            await this.writeCmd("Content-Transfer-Encoding: quoted-printable");
+
+            await this.writeCmd(attachment.content, "\r\n");
+          } else if (attachment.encoding === "base64") {
+            await this.writeCmd("Content-Transfer-Encoding: binary");
+            await this.writeCmdBinary(base64Decode(attachment.content));
+            await this.writeCmd();
+          }
+        }
+      }
+
+      // TODO: add attachments
+
+      await this.writeCmd("--attachment--\r\n");
+
+      await this.writeCmd(".\r\n");
+
+      this.assertCode(await this.readCmd(), CommandCode.OK);
+    } catch(ex) {
+      this.#queNextSending()
+      throw ex
     }
 
-    // TODO: add attachments
-
-    await this.writeCmd("--attachment--\r\n");
-
-    await this.writeCmd(".\r\n");
-
-    this.assertCode(await this.readCmd(), CommandCode.OK);
+    this.#queNextSending()
   }
 
   async #connect(conn: Deno.Conn, config: ConnectConfig) {
