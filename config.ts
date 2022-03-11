@@ -48,6 +48,7 @@ type arrayBufferLikeAttachment = {
 interface Content {
   mimeType: string;
   content: string;
+  transferEncoding?: string
 }
 
 export type mailString = string;

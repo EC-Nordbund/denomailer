@@ -7,7 +7,8 @@ import type {
   mailListObject,
 } from "./config.ts";
 import {validateConfig} from "./config.ts";
-import { BufReader, BufWriter, TextProtoReader, base64Decode } from "./deps.ts";
+import { BufReader, BufWriter, TextProtoReader } from "./deps.ts";
+import { base64Decode, quotedPrintableEncode } from "./encoding.ts";
 
 const encoder = new TextEncoder();
 
@@ -150,9 +151,14 @@ export class SmtpClient {
         if (config.content) {
           config.mimeContent.push({
             mimeType: 'text/plain; charset="utf-8"',
-            content: config.content,
+            content: quotedPrintableEncode(config.content),
+            transferEncoding: 'quoted-printable',
           });
         }
+
+        // await this.writeCmd(
+        //   `Content-Transfer-Encoding: ${this._content_encoding}` + "\r\n",
+        // );
 
         if (config.html) {
           if (!config.content) {
@@ -163,7 +169,8 @@ export class SmtpClient {
 
           config.mimeContent.push({
             mimeType: 'text/html; charset="utf-8"',
-            content: config.html,
+            content: quotedPrintableEncode(config.html),
+            transferEncoding: 'quoted-printable',
           });
         }
       }
@@ -249,8 +256,16 @@ export class SmtpClient {
         await this.writeCmd("--message");
         await this.writeCmd(
           "Content-Type: " + config.mimeContent[i].mimeType,
-          "\r\n"
         );
+        if(config.mimeContent[i].transferEncoding) {
+          await this.writeCmd(
+            `Content-Transfer-Encoding: ${config.mimeContent[i].transferEncoding}` + "\r\n",
+          );
+        } else {
+          // Send new line
+          await this.writeCmd('')
+        }
+        
         await this.writeCmd(config.mimeContent[i].content, "\r\n");
       }
 
@@ -297,8 +312,6 @@ export class SmtpClient {
           }
         }
       }
-
-      // TODO: add attachments
 
       await this.writeCmd("--attachment--\r\n");
 
