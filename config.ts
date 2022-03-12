@@ -19,11 +19,10 @@ interface SendConfig {
   mimeContent?: Content[];
   html?: string;
   inReplyTo?: string;
-  replyTo?: mailString;
+  replyTo?: string;
   references?: string;
   priority?: "high" | "normal" | "low";
   attachments?: attachment[];
-  onlySecure?: boolean;
 }
 
 interface baseAttachment {
@@ -52,7 +51,6 @@ interface Content {
   transferEncoding?: string;
 }
 
-export type mailString = string;
 export type email = string;
 export type emailWithName = string;
 export type wrapedMail = string;

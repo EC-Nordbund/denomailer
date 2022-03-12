@@ -21,6 +21,7 @@ interface Command {
 
 interface SmtpClientOptions {
   console_debug?: boolean;
+  unsecure?: boolean;
 }
 
 export class SmtpClient {
@@ -31,15 +32,14 @@ export class SmtpClient {
   #writer: BufWriter | null = null;
 
   #console_debug = false;
-
-  get isSecure() {
-    return this.#secure;
-  }
+  #allowUnsecure = false;
 
   constructor({
     console_debug = false,
+    unsecure = false,
   }: SmtpClientOptions = {}) {
     this.#console_debug = console_debug;
+    this.#allowUnsecure = unsecure;
   }
 
   async connect(config: ConnectConfig | ConnectConfigWithAuthentication) {
@@ -93,17 +93,12 @@ export class SmtpClient {
 
     this.#sending.splice(0, 1);
 
-    // Call it async after current sending is resolved and the corresponding handler could run!
-    queueMicrotask(() => queueMicrotask(run))
+    queueMicrotask(run);
   }
 
   async send(config: SendConfig) {
     try {
       await this.#cueSending();
-
-      if ((config.onlySecure ?? true) && !this.#secure) {
-        throw new Error("The connection is not secured with STARTTLS nor TLS");
-      }
 
       validateConfig(config);
 
@@ -345,6 +340,12 @@ export class SmtpClient {
         const cmd = await this.readCmd();
         if (!cmd || !cmd.args.startsWith("-")) break;
       }
+    }
+
+    if (!this.#allowUnsecure && !this.#secure) {
+      throw new Error(
+        "Connection is not secure! Don't send authentication over non secure connection!",
+      );
     }
 
     if (this.useAuthentication(config)) {

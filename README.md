@@ -1,34 +1,5 @@
 ## Deno SMTP mail client
 
-> This is a WIP fork of the (dead?) https://github.com/manyuanrong/deno-smtp to
-> enable better mail sending!
-
-The following additional API are added / planed:
-
-- [x] to multiple mails
-- [x] cc and bcc
-- [x] STARTTLS (Thanks to @dbellingroth)
-- [x] Attachments
-- [x] replyTo
-- [x] rewrite content with more options
-- [x] priority
-- [x] mail validation to avoid abuse to spam!
-- [ ] fix race condition
-- [ ] encoding tests (äöß,...) pending attachments
-
-Allowed SingleMailFormat:
-
-```txt
-name@example.de
-<name@example.de>
-NAME <name@example.de>
-{mail: "name@example.de"}
-{mail: "name@example.de", name: "NAME"}
-```
-
-For to, cc, bcc you can provide one of the above OR a array of the above OR a
-object: {"NAME": "name@example.de"} where the name maps to the mail.
-
 ### IMPORTANT SECURITY INFORMATION
 
 PLEASE update to a version >= 0.8! 0.8 has a problem where malformed mails could
@@ -40,17 +11,40 @@ dangorus attachment!
 Also make shure that Mails are sent one after the other as they can corrupt each
 others data!
 
-<!-- We use the following regex to validate a single email: `/([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)/` -->
+### Allowed Mail Formats
 
-<!-- [![Build Status](https://github.com/manyuanrong/deno-smtp/workflows/ci/badge.svg?branch=master)](https://github.com/manyuanrong/deno-smtp/actions)
-![GitHub](https://img.shields.io/github/license/manyuanrong/deno-smtp.svg)
-![GitHub release](https://img.shields.io/github/release/manyuanrong/deno-smtp.svg)
-![(Deno)](https://img.shields.io/badge/deno-1.0.0-green.svg) -->
+A single Mail `mail@example.de` with a name `NAME` can be encoded in the
+following ways:
+
+1. `"name@example.de"`
+2. `"<name@example.de>"`
+3. `"NAME <name@example.de>"`
+4. `{mail: "name@example.de"}`
+5. `{mail: "name@example.de", name: "NAME"}`
+
+Where 1-3 is called a "MailString".
+
+Multiple Mails can be an Array of the above OR a object that maps names to mails
+for example:
+
+`{"P1": "p1@example.de", "P2": "p2@example.de"}` we call this a MailObject.
+
+For the fields
+
+1. `from`, `replyTo` we only allow a "MailString".
+2. `to`, `cc`, `bcc` we allow a MailObject a Array of single Mails or a single
+   Mail.
+
+### Sending multiple mails
+
+Note that for race-condition reasons we can't send multiple mails at once.
+Because of that if send is allready called and still processing a mail
+`client.send` will que that sending.
 
 ### Example
 
 ```ts
-import { SmtpClient } from "https://deno.land/x/denomailer/mod.ts";
+import { SmtpClient, quotedPrintableEncode } from "https://deno.land/x/denomailer/mod.ts";
 
 const client = new SmtpClient();
 
@@ -63,10 +57,41 @@ await client.connect({
 
 await client.send({
   from: "mailaddress@163.com",
-  to: "to-address@xx.com",
+  to: "Me <to-address@xx.com>",
+  cc: [
+    "name@example.de",
+    "<name@example.de>",
+    "NAME <name@example.de>",
+    {mail: "name@example.de"},
+    {mail: "name@example.de", name: "NAME"}
+  ],
+  bcc: {
+    "Me": "to-address@xx.com"
+  },
   subject: "Mail Title",
   content: "Mail Content",
   html: "<a href='https://github.com'>Github</a>",
+  date: "12 Mar 2022 10:38:05 GMT",
+  priority: "high",
+  replyTo: 'mailaddress@163.com',
+  attachments: [
+    { encoding: "text"; content: 'Hi', contentType: 'text/plain', filename: 'text.txt' },
+    { encoding: "base64"; content: '45dasjZ==', contentType: 'image/png', filename: 'img.png' },
+    {
+      content: new Uint8Array([0,244,123]),
+      encoding: "binary",
+      contentType: 'image/jpeg', 
+      filename: 'bin.png'
+    }
+  ],
+  mimeContent: [
+    {
+      mimeType: 'application/markdown',
+      content: quotedPrintableEncode('# Title\n\nHello World!'),
+      transferEncoding: 'quoted-printable'
+    }
+  ]
+  
 });
 
 await client.close();
@@ -107,13 +132,12 @@ await client.close();
 
 You can pass options to your client through the `SmtpClient` constructor.
 
-As in https://deno.land/x/smtp this options currently doesn't do anything!
-
 ```ts
 import { SmtpClient } from "https://deno.land/x/denomailer/mod.ts";
 
 //Defaults
 const client = new SmtpClient({
-  content_encoding: "quoted-printable", // 7bit, 8bit, base64, binary, quoted-printable
+  console_debug: true, // enable debugging this is good while developing should be false in production as Authentication IS LOGGED TO CONSOLE!
+  unsecure: true, // allow unsecure connection to send authentication IN PLAIN TEXT and also mail content!
 });
 ```
