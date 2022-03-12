@@ -2,11 +2,13 @@ import { CommandCode } from "./code.ts";
 import type {
   ConnectConfig,
   ConnectConfigWithAuthentication,
-  mailList,
-  mailListObject,
   SendConfig,
 } from "./config.ts";
-import { validateConfig } from "./config.ts";
+import {
+  normaliceMailList,
+  normaliceMailString,
+  validateConfig,
+} from "./config.ts";
 import { BufReader, BufWriter, TextProtoReader } from "./deps.ts";
 import { base64Decode, quotedPrintableEncode } from "./encoding.ts";
 
@@ -17,16 +19,7 @@ interface Command {
   args: string;
 }
 
-enum ContentTransferEncoding {
-  "7bit" = "7bit",
-  "8bit" = "8bit",
-  "base64" = "base64",
-  "binary" = "binary",
-  "quoted-printable" = "quoted-printable",
-}
-
 interface SmtpClientOptions {
-  content_encoding?: "7bit" | "8bit" | "base64" | "binary" | "quoted-printable";
   console_debug?: boolean;
 }
 
@@ -38,26 +31,15 @@ export class SmtpClient {
   #writer: BufWriter | null = null;
 
   #console_debug = false;
-  #content_encoding: ContentTransferEncoding;
 
   get isSecure() {
     return this.#secure;
   }
 
   constructor({
-    content_encoding = ContentTransferEncoding["quoted-printable"],
     console_debug = false,
   }: SmtpClientOptions = {}) {
     this.#console_debug = console_debug;
-
-    const _content_encoding = content_encoding.toLowerCase();
-
-    if (!(_content_encoding in ContentTransferEncoding)) {
-      throw new Error(
-        `${JSON.stringify(content_encoding)} is not a valid content encoding`,
-      );
-    }
-    this.#content_encoding = _content_encoding as ContentTransferEncoding;
   }
 
   async connect(config: ConnectConfig | ConnectConfigWithAuthentication) {
@@ -111,7 +93,8 @@ export class SmtpClient {
 
     this.#sending.splice(0, 1);
 
-    Promise.resolve().then(() => run());
+    // Call it async after current sending is resolved and the corresponding handler could run!
+    queueMicrotask(() => queueMicrotask(run))
   }
 
   async send(config: SendConfig) {
@@ -155,10 +138,6 @@ export class SmtpClient {
             transferEncoding: "quoted-printable",
           });
         }
-
-        // await this.writeCmd(
-        //   `Content-Transfer-Encoding: ${this._content_encoding}` + "\r\n",
-        // );
 
         if (config.html) {
           if (!config.content) {
@@ -447,43 +426,5 @@ export class SmtpClient {
     } else {
       return [`<${email}>`, `<${email}>`];
     }
-  }
-}
-
-function normaliceMailString(mail: string) {
-  if (mail.includes("<")) {
-    return mail;
-  } else {
-    return `<${mail}>`;
-  }
-}
-
-function normaliceMailList(
-  mails?: mailList | null,
-): string[] {
-  if (!mails) return [];
-
-  if (typeof mails === "string") {
-    return [normaliceMailString(mails)];
-  } else if (Array.isArray(mails)) {
-    return mails.map((m) => {
-      if (typeof m === "string") {
-        if (m.includes("<")) {
-          return m;
-        } else {
-          return `<${m}>`;
-        }
-      } else {
-        return m.name ? (`${m.name} <${m.mail}>`) : (`<${m.mail}>`);
-      }
-    });
-  } else if (mails.mail) {
-    return [
-      mails.name ? (`${mails.name} <${mails.mail}>`) : (`<${mails.mail}>`),
-    ];
-  } else {
-    return Object.entries(mails as mailListObject).map(
-      ([name, mail]: [string, string]) => `${name} <${mail}>`,
-    );
   }
 }

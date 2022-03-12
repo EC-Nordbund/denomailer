@@ -122,3 +122,41 @@ function validateMailList(mailList: mailList) {
 
   return !Object.values(mailList).some((m) => !isSingleMail(m));
 }
+
+export function normaliceMailString(mail: string) {
+  if (mail.includes("<")) {
+    return mail;
+  } else {
+    return `<${mail}>`;
+  }
+}
+
+export function normaliceMailList(
+  mails?: mailList | null,
+): string[] {
+  if (!mails) return [];
+
+  if (typeof mails === "string") {
+    return [normaliceMailString(mails)];
+  } else if (Array.isArray(mails)) {
+    return mails.map((m) => {
+      if (typeof m === "string") {
+        if (m.includes("<")) {
+          return m;
+        } else {
+          return `<${m}>`;
+        }
+      } else {
+        return m.name ? (`${m.name} <${m.mail}>`) : (`<${m.mail}>`);
+      }
+    });
+  } else if (mails.mail) {
+    return [
+      mails.name ? (`${mails.name} <${mails.mail}>`) : (`<${mails.mail}>`),
+    ];
+  } else {
+    return Object.entries(mails as mailListObject).map(
+      ([name, mail]: [string, string]) => `${name} <${mail}>`,
+    );
+  }
+}
