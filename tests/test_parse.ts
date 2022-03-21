@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.104.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.129.0/testing/asserts.ts";
 
 function parseAddress(email: string): [string, string] {
   const m = email.match(/(.*)\s<(.*)>/);
