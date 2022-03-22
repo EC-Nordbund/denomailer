@@ -141,3 +141,12 @@ const client = new SmtpClient({
   unsecure: true, // allow unsecure connection to send authentication IN PLAIN TEXT and also mail content!
 });
 ```
+
+## TLS issues
+When getting TLS errors make shure:
+1. you use the correct port (mostly 25, 587, 465)
+2. the server supports STARTTLS when using `client.connect`
+3. the server supports TLS when using `client.connectTLS`
+4. Use the command `openssl s_client -debug -starttls smtp -crlf -connect your-host.de:587` or `openssl s_client -debug -crlf -connect your-host.de:587` and get the used cipher this should be a cipher with "forward secrecy". Check the status of the cipher on https://ciphersuite.info/cs/ . If the cipher is not STRONG this is an issue with your mail provider so you have to contact them to fix it.
+5. Feel free to create issues if you are ok with that share the port and host so a proper debug can be done.
+6. We can only support TLS where Deno supports it and Deno uses rustls wich explicitly not implemented some "weak" ciphers.
