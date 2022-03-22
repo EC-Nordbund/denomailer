@@ -302,6 +302,8 @@ export class SmtpClient {
     this.#queNextSending();
   }
 
+  #supportedFeatures = new Set<string>()
+
   async #connect(conn: Deno.Conn, config: ConnectConfig) {
     this.#conn = conn;
     const reader = new BufReader(this.#conn);
@@ -312,15 +314,20 @@ export class SmtpClient {
 
     await this.writeCmd("EHLO", config.hostname);
 
-    let startTLS = false;
-
     while (true) {
       const cmd = await this.readCmd();
-      if (!cmd || !cmd.args.startsWith("-")) break;
-      if (cmd.args == "-STARTTLS") startTLS = true;
+
+      if(!cmd) break
+
+      // Trim args
+      const cleanCMD = cmd.args[0] === '-' ? cmd.args.slice(1) : cmd.args
+
+      this.#supportedFeatures.add(cleanCMD)
+
+      if(cmd.args[0] !== '-') break
     }
 
-    if (startTLS) {
+    if (this.#supportedFeatures.has('STARTTLS')) {
       await this.writeCmd("STARTTLS");
       this.assertCode(await this.readCmd(), CommandCode.READY);
 
@@ -374,6 +381,11 @@ export class SmtpClient {
       return null;
     }
     const result = await this.#reader.readLine();
+
+    if (this.#console_debug) {
+      console.log(result);
+    }
+
     if (result === null) return null;
     const cmdCode = parseInt(result.slice(0, 3).trim());
     const cmdArgs = result.slice(3).trim();
