@@ -28,5 +28,15 @@ Provide the output of your code snippet (with console_debug set to true see http
 Put log here
 ```
 
+If and only if you have problems with TLS or STARTTLS please provide the output of the following commands:
+
+```
+# STARTTLS
+openssl s_client -debug -starttls smtp -crlf -connect your-host.de:25
+
+# TLS
+openssl s_client -debug -crlf -connect your-host.de:25
+```
+
 **Additional context**
 Add any other context about the problem here. Is there a older version you know where this was working?
