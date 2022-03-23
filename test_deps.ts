@@ -1,1 +1,1 @@
-export { config as configEnv } from "https://deno.land/x/dotenv@v3.0.0/mod.ts";
+export { config as configEnv } from "https://deno.land/std@0.130.0/dotenv/mod.ts";
