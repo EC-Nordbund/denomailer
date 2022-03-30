@@ -3,12 +3,12 @@
 ### IMPORTANT SECURITY INFORMATION
 
 PLEASE update to a version >= 0.8! 0.8 has a problem where malformed mails could
-potatialy allow attackers to create a mail (with linebreaks) to send unwanted
-SMTP commands. This could result in authentic phishing attacks! Whith no way for
+potentialy allow attackers to create a mail (with linebreaks) to send unwanted
+SMTP commands. This could result in authentic phishing attacks! With no way for
 the user to identify that this is a phishing mail! Or that this mail contains a
-dangorus attachment!
+dangerous attachment!
 
-Also make shure that Mails are sent one after the other as they can corrupt each
+Also make sure that Mails are sent one after the other as they can corrupt each
 others data!
 
 ### Allowed Mail Formats
@@ -38,8 +38,8 @@ For the fields
 ### Sending multiple mails
 
 Note that for race-condition reasons we can't send multiple mails at once.
-Because of that if send is allready called and still processing a mail
-`client.send` will que that sending.
+Because of that if send is already called and still processing a mail
+`client.send` will queue that sending.
 
 ### Example
 
