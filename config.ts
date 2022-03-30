@@ -23,6 +23,7 @@ interface SendConfig {
   references?: string;
   priority?: "high" | "normal" | "low";
   attachments?: attachment[];
+  internalTag?: string | symbol
 }
 
 interface baseAttachment {

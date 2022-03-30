@@ -128,6 +128,20 @@ await client.send({
 await client.close();
 ```
 
+### Filter E-Mails
+If you want a custom E-Mail validator and filter some E-Mails (because they are burner mails or the domain is on a blacklist or only allow specific domains etc.) you can add the `mailFilter` option to the smtp-client constructor options. `mailFilter` takes a function that gets 3 Arguments the "mailbox" (all that is before @ in the mail), the "domain" (what is after the @) and `internalTag` that is a new option that can be set in the mailConfig so you can set a type for that mail for example type `newsletter` etc. `internalTag` can be a `string` or a `symbol`.
+
+The filter function returns a boolean or a Promise that resolves to a boolean. There are 3 things you can do when this function is called:
+
+1. return `true` the E-Mail is keept in the list
+2. return `false` the E-Mail is removed from the list
+3. throw an Error the E-Mail is aborted and never send
+
+So you can decide if a single mail error results in a complete mail abort or it only get removed from the list.
+
+You can for example validate against this list: https://github.com/wesbos/burner-email-providers.
+
+
 ### Configuring your client
 
 You can pass options to your client through the `SmtpClient` constructor.

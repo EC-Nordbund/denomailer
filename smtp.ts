@@ -22,6 +22,7 @@ interface Command {
 interface SmtpClientOptions {
   console_debug?: boolean;
   unsecure?: boolean;
+  mailFilter?: (box: string, domain: string, internalTag?: string | symbol | undefined) => (Promise<boolean>  | boolean)
 }
 
 export class SmtpClient {
@@ -33,13 +34,16 @@ export class SmtpClient {
 
   #console_debug = false;
   #allowUnsecure = false;
+  #mailFilter: SmtpClientOptions['mailFilter']
 
   constructor({
     console_debug = false,
     unsecure = false,
+    mailFilter
   }: SmtpClientOptions = {}) {
     this.#console_debug = console_debug;
     this.#allowUnsecure = unsecure;
+    this.#mailFilter = mailFilter
   }
 
   async connect(config: ConnectConfig | ConnectConfigWithAuthentication) {
@@ -104,7 +108,25 @@ export class SmtpClient {
 
       const [from, fromData] = this.parseAddress(config.from);
 
-      const to = normaliceMailList(config.to).map((m) => this.parseAddress(m));
+      const to = config.to ? await this.filterMails(normaliceMailList(config.to).map((m) => this.parseAddress(m)), config.internalTag) : false;
+
+      const cc = config.cc
+        ? await this.filterMails(normaliceMailList(config.cc).map((v) => this.parseAddress(v)), config.internalTag)
+        : false;
+
+      const bcc =config.bcc ? await this.filterMails(normaliceMailList(config.bcc).map((v) =>
+        this.parseAddress(v)
+      ), config.internalTag) : false;
+
+      if (config.replyTo) {
+        config.replyTo = normaliceMailString(config.replyTo);
+
+        const res = await this.filterMail([config.replyTo, config.replyTo], config.internalTag)
+
+        if(!res) {
+          throw new Error("ReplyTo Email is not vaild as the filter returned false")
+        }
+      }
 
       const date = config.date ??
         new Date().toUTCString().split(",")[1].slice(1);
@@ -156,28 +178,22 @@ export class SmtpClient {
       await this.writeCmd("MAIL", "FROM:", from);
       this.assertCode(await this.readCmd(), CommandCode.OK);
 
-      for (let i = 0; i < to.length; i++) {
-        await this.writeCmd("RCPT", "TO:", to[i][0]);
-        this.assertCode(await this.readCmd(), CommandCode.OK);
+      if(to) {
+        for (let i = 0; i < to.length; i++) {
+          await this.writeCmd("RCPT", "TO:", to[i][0]);
+          this.assertCode(await this.readCmd(), CommandCode.OK);
+        }
       }
 
-      const cc = config.cc
-        ? normaliceMailList(config.cc).map((v) => this.parseAddress(v))
-        : false;
-
       if (cc) {
-        console.log("cc");
         for (let i = 0; i < cc.length; i++) {
           await this.writeCmd("RCPT", "TO:", cc[i][0]);
           this.assertCode(await this.readCmd(), CommandCode.OK);
         }
       }
+      
 
-      if (config.bcc) {
-        const bcc = normaliceMailList(config.bcc).map((v) =>
-          this.parseAddress(v)
-        );
-
+      if (bcc) {
         for (let i = 0; i < bcc.length; i++) {
           await this.writeCmd("RCPT", "TO:", bcc[i][0]);
           this.assertCode(await this.readCmd(), CommandCode.OK);
@@ -189,7 +205,9 @@ export class SmtpClient {
 
       await this.writeCmd("Subject: ", config.subject);
       await this.writeCmd("From: ", fromData);
-      await this.writeCmd("To: ", to.map((v) => v[1]).join(";"));
+      if(to) {
+        await this.writeCmd("To: ", to.map((v) => v[1]).join(";"));
+      }
       if (cc) {
         await this.writeCmd("Cc: ", cc.map((v) => v[1]).join(";"));
       }
@@ -204,8 +222,6 @@ export class SmtpClient {
       }
 
       if (config.replyTo) {
-        config.replyTo = normaliceMailString(config.replyTo);
-
         await this.writeCmd("ReplyTo: ", config.replyTo);
       }
 
@@ -438,6 +454,24 @@ export class SmtpClient {
       return [`<${m}>`, email];
     } else {
       return [`<${email}>`, `<${email}>`];
-    }
+    } 
+  }
+
+  private async filterMail([raw, _withName]: [string, string], internalTag: string | symbol | undefined): Promise<boolean> {
+    if(!this.#mailFilter) return true
+    
+    const [box, domain] = raw.slice(1, raw.length - 1).split('@')
+
+    const res = await this.#mailFilter!(box, domain, internalTag)
+
+    return res
+  }
+
+  private async filterMails(mails: [string, string][], internalTag: string | symbol | undefined): Promise<[string, string][]> {
+    if(!this.#mailFilter) return mails
+
+    const keep = await Promise.all(mails.map(m => this.filterMail(m, internalTag)))
+
+    return mails.filter((_, i) => keep[i])
   }
 }
