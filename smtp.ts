@@ -101,6 +101,14 @@ export class SmtpClient {
   }
 
   async send(config: SendConfig) {
+    const result = {
+      emailsRemoved: {
+        to: [],
+        cc: [],
+        bcc: []
+      }
+    }
+    
     try {
       await this.#cueSending();
 
@@ -183,6 +191,7 @@ export class SmtpClient {
           await this.writeCmd("RCPT", "TO:", to[i][0]);
           const { code, args } = await this.readCmd()
           if(code === 550) {
+            result.emailsRemoved.to.push(to[i])
             to.splice(i, 1)
             i--
           } else if (code !== 250) {
@@ -196,6 +205,7 @@ export class SmtpClient {
           await this.writeCmd("RCPT", "TO:", cc[i][0]);
           const { code, args } = await this.readCmd()
           if(code === 550) {
+            result.emailsRemoved.cc.push(cc[i])
             cc.splice(i, 1)
             i--
           } else if (code !== 250) {
@@ -210,6 +220,7 @@ export class SmtpClient {
           await this.writeCmd("RCPT", "TO:", bcc[i][0]);
           const { code, args } = await this.readCmd()
           if(code === 550) {
+            result.emailsRemoved.bcc.push(bcc[i])
             to.splice(i, 1)
             i--
           } else if (code !== 250) {
@@ -334,6 +345,7 @@ export class SmtpClient {
     }
 
     this.#queNextSending();
+    return result;
   }
 
   #supportedFeatures = new Set<string>()
