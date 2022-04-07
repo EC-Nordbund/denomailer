@@ -181,14 +181,26 @@ export class SmtpClient {
       if(to) {
         for (let i = 0; i < to.length; i++) {
           await this.writeCmd("RCPT", "TO:", to[i][0]);
-          this.assertCode(await this.readCmd(), CommandCode.OK);
+          const { code, args } = await this.readCmd()
+          if(code === 550) {
+            to.splice(i, 1)
+            i--
+          } else if (code !== 250) {
+            throw new Error(code + ": " + args);
+          }
         }
       }
 
       if (cc) {
         for (let i = 0; i < cc.length; i++) {
           await this.writeCmd("RCPT", "TO:", cc[i][0]);
-          this.assertCode(await this.readCmd(), CommandCode.OK);
+          const { code, args } = await this.readCmd()
+          if(code === 550) {
+            cc.splice(i, 1)
+            i--
+          } else if (code !== 250) {
+            throw new Error(code + ": " + args);
+          }
         }
       }
       
@@ -196,7 +208,13 @@ export class SmtpClient {
       if (bcc) {
         for (let i = 0; i < bcc.length; i++) {
           await this.writeCmd("RCPT", "TO:", bcc[i][0]);
-          this.assertCode(await this.readCmd(), CommandCode.OK);
+          const { code, args } = await this.readCmd()
+          if(code === 550) {
+            to.splice(i, 1)
+            i--
+          } else if (code !== 250) {
+            throw new Error(code + ": " + args);
+          }
         }
       }
 
