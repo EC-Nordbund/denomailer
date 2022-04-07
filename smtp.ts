@@ -201,7 +201,7 @@ export class SmtpClient {
       }
 
       await this.writeCmd("DATA");
-      this.assertCode(await this.readCmd(), CommandCode.BEGIN_DATA);
+      // this.assertCode(await this.readCmd(), CommandCode.BEGIN_DATA);
 
       await this.writeCmd("Subject: ", config.subject);
       await this.writeCmd("From: ", fromData);
@@ -373,13 +373,15 @@ export class SmtpClient {
 
     if (this.useAuthentication(config)) {
       await this.writeCmd("AUTH", "LOGIN");
-      this.assertCode(await this.readCmd(), 334);
+      const thing = await this.readCmd();
+      console.log(thing);
+      // this.assertCode(thing, 334);
 
       await this.writeCmd(btoa(config.username));
-      this.assertCode(await this.readCmd(), 334);
+      // this.assertCode(await this.readCmd(), 334);
 
       await this.writeCmd(btoa(config.password));
-      this.assertCode(await this.readCmd(), CommandCode.AUTHO_SUCCESS);
+      // this.assertCode(await this.readCmd(), CommandCode.AUTHO_SUCCESS);
     }
   }
 
