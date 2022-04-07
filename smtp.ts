@@ -373,9 +373,8 @@ export class SmtpClient {
 
     if (this.useAuthentication(config)) {
       await this.writeCmd("AUTH", "LOGIN");
-      const thing = await this.readCmd();
-      console.log(thing);
-      // this.assertCode(thing, 334);
+      await this.readCmd();
+      // this.assertCode(await this.readCmd(), 334);
 
       await this.writeCmd(btoa(config.username));
       // this.assertCode(await this.readCmd(), 334);
