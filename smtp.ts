@@ -356,6 +356,7 @@ export class SmtpClient {
 
       this.assertCode(await this.readCmd(), CommandCode.OK);
     } catch (ex) {
+      await this.writeCmd("RSET")
       this.#queNextSending();
       throw ex;
     }
