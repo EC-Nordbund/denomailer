@@ -20,6 +20,7 @@ interface Command {
 }
 
 interface SmtpClientOptions {
+  throwOnEmailNotExisting?: boolean;
   console_debug?: boolean;
   unsecure?: boolean;
   mailFilter?: (box: string, domain: string, internalTag?: string | symbol | undefined) => (Promise<boolean>  | boolean)
@@ -34,16 +35,19 @@ export class SmtpClient {
 
   #console_debug = false;
   #allowUnsecure = false;
+  #throwOnEmailNotExisting = false
   #mailFilter: SmtpClientOptions['mailFilter']
 
   constructor({
     console_debug = false,
     unsecure = false,
+    throwOnEmailNotExisting = false,
     mailFilter
   }: SmtpClientOptions = {}) {
     this.#console_debug = console_debug;
     this.#allowUnsecure = unsecure;
     this.#mailFilter = mailFilter
+    this.#throwOnEmailNotExisting = throwOnEmailNotExisting
   }
 
   async connect(config: ConnectConfig | ConnectConfigWithAuthentication) {
@@ -191,6 +195,10 @@ export class SmtpClient {
           await this.writeCmd("RCPT", "TO:", to[i][0]);
           const { code, args } = await this.readCmd()
           if(code === 550) {
+            if(this.#throwOnEmailNotExisting) {
+              throw new Error(code + ": " + args);
+            }
+            
             result.emailsRemoved.to.push(to[i])
             to.splice(i, 1)
             i--
@@ -205,6 +213,10 @@ export class SmtpClient {
           await this.writeCmd("RCPT", "TO:", cc[i][0]);
           const { code, args } = await this.readCmd()
           if(code === 550) {
+            if(this.#throwOnEmailNotExisting) {
+              throw new Error(code + ": " + args);
+            }
+            
             result.emailsRemoved.cc.push(cc[i])
             cc.splice(i, 1)
             i--
@@ -220,6 +232,10 @@ export class SmtpClient {
           await this.writeCmd("RCPT", "TO:", bcc[i][0]);
           const { code, args } = await this.readCmd()
           if(code === 550) {
+            if(this.#throwOnEmailNotExisting) {
+              throw new Error(code + ": " + args);
+            }
+            
             result.emailsRemoved.bcc.push(bcc[i])
             to.splice(i, 1)
             i--
