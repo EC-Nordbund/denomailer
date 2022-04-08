@@ -1,7 +1,7 @@
 import { SmtpClient } from "./smtp.ts";
 import "https://deno.land/std@0.130.0/dotenv/load.ts";
 
-const { PORT, HOSTNAME, MAIL_USER, MAIL_TO_USER, MAIL_PASS } = Deno.env
+const { TLS, PORT, HOSTNAME, MAIL_USER, MAIL_TO_USER, MAIL_PASS } = Deno.env
   .toObject();
 
 const client = new SmtpClient();
@@ -11,11 +11,11 @@ const config = {
   username: MAIL_USER,
   password: MAIL_PASS,
 };
-// if (TLS) {
+if (TLS) {
   await client.connectTLS(config);
-// } else {
-  // await client.connect(config);
-// }
+} else {
+  await client.connect(config);
+}
 
 await client.send({
   from: MAIL_USER,
