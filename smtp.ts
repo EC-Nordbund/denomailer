@@ -201,7 +201,12 @@ export class SmtpClient {
       }
 
       await this.writeCmd("DATA");
-      // this.assertCode(await this.readCmd(), CommandCode.BEGIN_DATA);
+      const { code, args } = (await this.readCmd())!
+
+      // Some SMTP-Server responde with a 250. We will accept that.
+      if (code !== 334 && code !== 250) {
+        throw new Error(code + ': ' + args)
+      }
 
       await this.writeCmd("Subject: ", config.subject);
       await this.writeCmd("From: ", fromData);
@@ -372,15 +377,31 @@ export class SmtpClient {
     }
 
     if (this.useAuthentication(config)) {
+      let response;
+
+      // Request authentication
       await this.writeCmd("AUTH", "LOGIN");
-      await this.readCmd();
-      // this.assertCode(await this.readCmd(), 334);
+      response = (await this.readCmd())!;
 
+      if (response.code !== 334 && response.code !== 250) {
+        throw new Error(response.code + ': ' + response.args)
+      }
+
+      // Send username
       await this.writeCmd(btoa(config.username));
-      // this.assertCode(await this.readCmd(), 334);
+      response = (await this.readCmd())!;
 
+      if (response.code !== 334 && response.code !== 250) {
+        throw new Error(response.code + ': ' + response.args)
+      }
+
+      // Send password
       await this.writeCmd(btoa(config.password));
-      // this.assertCode(await this.readCmd(), CommandCode.AUTHO_SUCCESS);
+      response = (await this.readCmd())!;
+
+      if (response.code !== 334 && response.code !== 250) {
+        throw new Error(response.code + ': ' + response.args)
+      }
     }
   }
 
