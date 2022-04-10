@@ -164,3 +164,14 @@ When getting TLS errors make shure:
 4. Use the command `openssl s_client -debug -starttls smtp -crlf -connect your-host.de:587` or `openssl s_client -debug -crlf -connect your-host.de:587` and get the used cipher this should be a cipher with "forward secrecy". Check the status of the cipher on https://ciphersuite.info/cs/ . If the cipher is not STRONG this is an issue with your mail provider so you have to contact them to fix it.
 5. Feel free to create issues if you are ok with that share the port and host so a proper debug can be done.
 6. We can only support TLS where Deno supports it and Deno uses rustls wich explicitly not implemented some "weak" ciphers.
+
+
+### Non SpecCompliant SMTP-Server
+There are some SMTP-Server that don't follow the spec to 100%. This can result in unexpected errors in denomailer. If this happens (for example in https://github.com/EC-Nordbund/denomailer/blob/03a66a6f9a4b5f349ea35856f5903fb45fd0cc5f/smtp.ts#L376 the server sends a 250) please create an issue. We will try and do the following:
+
+1. Check if it is not an error in denomailer
+2. Try to fix it at the SMTP-Server side (create an issue if the server is an opensource project etc.)
+3. We will add a ***temporary*** workaround by changing denomailer. This will include log messages telling the developer (if the workaround is used) that denomailer used the workaround wich can be removed at any time.
+
+
+
