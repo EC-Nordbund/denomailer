@@ -315,14 +315,14 @@ export class SmtpClient {
       this.#queNextSending();
       throw ex;
     }
-    await this.cleanup()
+    await this.#cleanup()
     this.#queNextSending();
   }
 
   #supportedFeatures = new Set<string>()
   #_reader?: BufReader
 
-  async cleanup() {
+  async #cleanup() {
     this.writeCmd('NOOP')
 
     while (true) {
@@ -393,7 +393,7 @@ export class SmtpClient {
       this.assertCode(await this.readCmd(), CommandCode.AUTHO_SUCCESS);
     }
 
-    await this.cleanup()
+    await this.#cleanup()
   }
 
   private assertCode(cmd: Command | null, code: number, msg?: string) {
