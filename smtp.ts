@@ -70,6 +70,18 @@ export class SmtpClient {
     await this.#conn.close();
   }
 
+  get isSending() {
+    return this.#currentlySending
+  }
+
+  #idleCB = new Set<()=>void>()
+
+  get waitIdle() {
+    if(!this.isSending) return Promise.resolve()
+
+    return new Promise<void>((res) => {this.#idleCB.add(res)})
+  }
+
   #currentlySending = false;
   #sending: (() => void)[] = [];
 
@@ -90,6 +102,7 @@ export class SmtpClient {
   #queNextSending() {
     if (this.#sending.length === 0) {
       this.#currentlySending = false;
+      this.#idleCB.forEach(cb => cb())
       return;
     }
 
