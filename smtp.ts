@@ -74,19 +74,21 @@ export class SmtpClient {
     return this.#currentlySending
   }
 
-  #idleCB = new Set<()=>void>()
-
-  get waitIdle() {
-    if(!this.isSending) return Promise.resolve()
-
-    return new Promise<void>((res) => {this.#idleCB.add(res)})
+  get idle() {
+    return this.#idlePromise
   }
+
+  #idlePromise = Promise.resolve()
+  #idleCB = () => {}
 
   #currentlySending = false;
   #sending: (() => void)[] = [];
 
   #cueSending() {
     if (!this.#currentlySending) {
+      this.#idlePromise = new Promise((res) => {
+        this.#idleCB = res
+      })
       this.#currentlySending = true;
       return;
     }
@@ -102,7 +104,7 @@ export class SmtpClient {
   #queNextSending() {
     if (this.#sending.length === 0) {
       this.#currentlySending = false;
-      this.#idleCB.forEach(cb => cb())
+      this.#idleCB()
       return;
     }
 
