@@ -156,6 +156,11 @@ const client = new SmtpClient({
 });
 ```
 
+## Pool, Worker
+> This is unstable API may change! This requires deno to run in unstable mode.
+
+Adds 2 new classes `SMTPWorker` and `SMTPWorkerPool` (for constructor options see code for now). This creates a SMTP client (or multiple) that get automaticly killed if the connection is not used for around 60s.
+
 ## TLS issues
 When getting TLS errors make shure:
 1. you use the correct port (mostly 25, 587, 465)
