@@ -101,6 +101,7 @@ export class SmtpClient {
   }
 
   async send(config: SendConfig) {
+
     try {
       await this.#cueSending();
 
@@ -310,21 +311,39 @@ export class SmtpClient {
       await this.writeCmd(".\r\n");
 
       this.assertCode(await this.readCmd(), CommandCode.OK);
+      // await this.readCmd()
+      // await this.readCmd()
+      await this.cleanup()
     } catch (ex) {
       this.#queNextSending();
       throw ex;
     }
 
+    // await this.writeCmd('QUIT')
+    // await this.readCmd()
+    // await this.readCmd()
+    
+    // EHLO HELO MAIL RCPT DATA RSET NOOP QUIT HELP
     this.#queNextSending();
   }
 
   #supportedFeatures = new Set<string>()
+  #_reader?: BufReader
+
+  async cleanup() {
+    this.writeCmd('NOOP')
+
+    while (true) {
+      const cmd = await this.readCmd()
+      if(cmd && cmd.code === 250) return
+    }
+  }
 
   async #connect(conn: Deno.Conn, config: ConnectConfig) {
     this.#conn = conn;
-    const reader = new BufReader(this.#conn);
+    this.#_reader = new BufReader(this.#conn);
     this.#writer = new BufWriter(this.#conn);
-    this.#reader = new TextProtoReader(reader);
+    this.#reader = new TextProtoReader(this.#_reader);
 
     this.assertCode(await this.readCmd(), CommandCode.READY);
 
@@ -353,9 +372,9 @@ export class SmtpClient {
 
       this.#secure = true;
 
-      const reader = new BufReader(this.#conn);
+      this.#_reader = new BufReader(this.#conn);
       this.#writer = new BufWriter(this.#conn);
-      this.#reader = new TextProtoReader(reader);
+      this.#reader = new TextProtoReader(this.#_reader);
 
       await this.writeCmd("EHLO", config.hostname);
 
@@ -381,6 +400,8 @@ export class SmtpClient {
       await this.writeCmd(btoa(config.password));
       this.assertCode(await this.readCmd(), CommandCode.AUTHO_SUCCESS);
     }
+
+    await this.cleanup()
   }
 
   private assertCode(cmd: Command | null, code: number, msg?: string) {
