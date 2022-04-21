@@ -311,19 +311,11 @@ export class SmtpClient {
       await this.writeCmd(".\r\n");
 
       this.assertCode(await this.readCmd(), CommandCode.OK);
-      // await this.readCmd()
-      // await this.readCmd()
-      await this.cleanup()
     } catch (ex) {
       this.#queNextSending();
       throw ex;
     }
-
-    // await this.writeCmd('QUIT')
-    // await this.readCmd()
-    // await this.readCmd()
-    
-    // EHLO HELO MAIL RCPT DATA RSET NOOP QUIT HELP
+    await this.cleanup()
     this.#queNextSending();
   }
 
