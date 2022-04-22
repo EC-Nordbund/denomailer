@@ -30,7 +30,8 @@ export class SMTPWorker {
         },
         namespace: true,
       },
-    });
+      // This allowes the deno option so only for pool and worker we need --unstable
+    } as any);
 
     this.#w.addEventListener("message", (ev: MessageEvent<boolean>) => {
       if (ev.data) {
