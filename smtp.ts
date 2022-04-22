@@ -167,7 +167,7 @@ export class SmtpClient {
         if (config.content) {
           config.mimeContent.push({
             mimeType: 'text/plain; charset="utf-8"',
-            content: quotedPrintableEncode(config.content),
+            content: quotedPrintableEncode(config.content, true),
             transferEncoding: "quoted-printable",
           });
         }
@@ -181,7 +181,7 @@ export class SmtpClient {
 
           config.mimeContent.push({
             mimeType: 'text/html; charset="utf-8"',
-            content: quotedPrintableEncode(config.html),
+            content: quotedPrintableEncode(config.html, true),
             transferEncoding: "quoted-printable",
           });
         }

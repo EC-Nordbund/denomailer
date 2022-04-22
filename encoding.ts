@@ -3,6 +3,8 @@ export { base64Decode } from "./deps.ts";
 const encoder = new TextEncoder();
 
 export function quotedPrintableEncode(data: string, encLB = false) {
+  data.replaceAll('=', '=3D')
+
   if (!encLB) {
     data = data.replaceAll(" \r\n", "=20\r\n").replaceAll(" \n", "=20\n");
   }
@@ -14,14 +16,16 @@ export function quotedPrintableEncode(data: string, encLB = false) {
     if (encodedChar.length === 1) {
       const code = encodedChar[0];
 
-      if (code >= 32 && code <= 126 && code !== 61) return ch;
+      if (code >= 32 && code <= 126) return ch;
       if (!encLB && (code === 10 || code === 13)) return ch;
       if (code === 9) return ch;
     }
 
     let enc = "";
     encodedChar.forEach((i) => {
-      enc += `=${i.toString(16)}`;
+      let c = i.toString(16)
+      if(c.length === 1) c = '0' + c
+      enc += `=${c}`;
     });
 
     return enc;
