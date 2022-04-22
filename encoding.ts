@@ -16,7 +16,7 @@ export function quotedPrintableEncode(data: string, encLB = false) {
     if (encodedChar.length === 1) {
       const code = encodedChar[0];
 
-      if (code >= 32 && code <= 126 && code !== 63) return ch;
+      if (code >= 32 && code <= 126 && code !== 61) return ch;
       if (!encLB && (code === 10 || code === 13)) return ch;
       if (code === 9) return ch;
     }
