@@ -23,6 +23,8 @@ interface SmtpClientOptions {
   console_debug?: boolean;
   unsecure?: boolean;
   mailFilter?: (box: string, domain: string, internalTag?: string | symbol | undefined) => (Promise<boolean>  | boolean)
+  /** @deprecated use ONLY for debugging! enable this to make shure that \n and \r are differently encoded. But this will tripple their size!*/
+  encodeLB?: boolean
 }
 
 export class SmtpClient {
@@ -39,11 +41,13 @@ export class SmtpClient {
   constructor({
     console_debug = false,
     unsecure = false,
-    mailFilter
+    mailFilter,
+    encodeLB = false
   }: SmtpClientOptions = {}) {
     this.#console_debug = console_debug;
     this.#allowUnsecure = unsecure;
     this.#mailFilter = mailFilter
+    this.#encodeLB = encodeLB
   }
 
   async connect(config: ConnectConfig | ConnectConfigWithAuthentication) {
@@ -80,6 +84,8 @@ export class SmtpClient {
 
   #idlePromise = Promise.resolve()
   #idleCB = () => {}
+
+  #encodeLB = false
 
   #currentlySending = false;
   #sending: (() => void)[] = [];
@@ -167,7 +173,7 @@ export class SmtpClient {
         if (config.content) {
           config.mimeContent.push({
             mimeType: 'text/plain; charset="utf-8"',
-            content: quotedPrintableEncode(config.content, true),
+            content: quotedPrintableEncode(config.content, this.#encodeLB),
             transferEncoding: "quoted-printable",
           });
         }
@@ -181,9 +187,13 @@ export class SmtpClient {
 
           config.mimeContent.push({
             mimeType: 'text/html; charset="utf-8"',
-            content: quotedPrintableEncode(config.html, true),
+            content: quotedPrintableEncode(config.html),
             transferEncoding: "quoted-printable",
           });
+
+          if(this.#console_debug) {
+            console.log(config.mimeContent.at(-1)?.content, this.#encodeLB)
+          }
         }
       }
 

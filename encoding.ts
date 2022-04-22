@@ -51,9 +51,9 @@ export function quotedPrintableEncode(data: string, encLB = false) {
 
     if (old.endsWith("\r") || old.endsWith("\n")) {
       ret += old;
+    } else {
+      ret += `${old}=\r\n`;
     }
-
-    ret += `${old}=\r\n`;
   }
 
   // Add rest with no new line
