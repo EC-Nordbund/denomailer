@@ -39,9 +39,14 @@ export function quotedPrintableEncode(data: string, encLB = false) {
     let old = encodedData.slice(i * 74 + offset, (i + 1) * 74);
     offset = 0
 
-    if(old[old.length-1] === '=' || old[old.length-2] === '=') {
-      old += encodedData[(i+1)*74]
-      offset = 1
+    if(old.at(-1) === '=') {
+      old = old.slice(0, old.length - 1)
+      offset = -1
+    }
+
+    if(old.at(-2) === '=') {
+      old = old.slice(0, old.length - 2)
+      offset = -2
     }
 
     if (old.endsWith("\r") || old.endsWith("\n")) {
