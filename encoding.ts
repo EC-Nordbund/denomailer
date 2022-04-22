@@ -32,10 +32,17 @@ export function quotedPrintableEncode(data: string, encLB = false) {
   }).join("");
 
   let ret = "";
-  const lines = Math.ceil(encodedData.length / 75) - 1;
+  const lines = Math.ceil(encodedData.length / 74) - 1;
 
+  let offset = 0
   for (let i = 0; i < lines; i++) {
-    const old = encodedData.slice(i * 75, (i + 1) * 75);
+    let old = encodedData.slice(i * 74 + offset, (i + 1) * 74);
+    offset = 0
+
+    if(old[old.length-1] === '=' || old[old.length-2] === '=') {
+      old += encodedData[(i+1)*74]
+      offset = 1
+    }
 
     if (old.endsWith("\r") || old.endsWith("\n")) {
       ret += old;
@@ -45,7 +52,7 @@ export function quotedPrintableEncode(data: string, encLB = false) {
   }
 
   // Add rest with no new line
-  ret += encodedData.slice(lines * 75);
+  ret += encodedData.slice(lines * 74);
 
   return ret;
 }
