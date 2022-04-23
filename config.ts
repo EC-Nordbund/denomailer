@@ -1,6 +1,7 @@
 interface ConnectConfig {
   hostname: string;
   port?: number;
+  tls?: boolean
 }
 
 interface ConnectConfigWithAuthentication extends ConnectConfig {
