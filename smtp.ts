@@ -26,8 +26,6 @@ export class SmtpClient {
   #reader: TextProtoReader | null = null;
   #writer: BufWriter | null = null;
 
-  #mailFilter = () => true
-
   constructor(private config: ResolvedClientOptions) {
     this.#ready = this.connect()
   }
