@@ -100,8 +100,9 @@ await client.close();
 #### TLS connection
 
 ```ts
-await client.connectTLS({
+await client.connect({
   hostname: "smtp.163.com",
+  tls: true,
   port: 465,
   username: "username",
   password: "password",
@@ -111,7 +112,8 @@ await client.connectTLS({
 #### Use in Gmail
 
 ```ts
-await client.connectTLS({
+await client.connect({
+  tls: true,
   hostname: "smtp.gmail.com",
   port: 465,
   username: "your username",
