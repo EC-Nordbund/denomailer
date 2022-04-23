@@ -2,6 +2,7 @@ import { SendConfig } from "./config.ts";
 import { ResolvedClientOptions } from "./entry.ts";
 
 export class SMTPWorker {
+  id = 1
   #timeout: number;
 
   constructor(
@@ -15,6 +16,8 @@ export class SMTPWorker {
   #idleMode2 = false;
   #noCon = true;
   #config: ResolvedClientOptions;
+
+  #resolver = new Map<number, {res: (res: any) => void, rej: (err: Error) => void}>()
 
   #startup() {
     this.#w = new Worker(new URL("./worker.ts", import.meta.url), {
@@ -30,7 +33,20 @@ export class SMTPWorker {
       // This allowes the deno option so only for pool and worker we need --unstable
     } as any);
 
-    this.#w.addEventListener("message", (ev: MessageEvent<boolean>) => {
+    this.#w.addEventListener("message", (ev: MessageEvent<boolean|{__ret: number, res: any, err: any}>) => {
+      if(typeof ev.data === 'object') {
+        if('err' in ev.data) {
+          this.#resolver.get(ev.data.__ret)?.rej(ev.data.err)
+        }
+
+        if('res' in ev.data) {
+          this.#resolver.get(ev.data.__ret)?.res(ev.data.res)
+        }
+
+        this.#resolver.delete(ev.data.__ret)
+        return 
+      }
+
       if (ev.data) {
         this.#stopIdle();
       } else {
@@ -74,11 +90,26 @@ export class SMTPWorker {
   }
 
   public send(mail: SendConfig) {
+    const myID = this.id
+    this.id++
     this.#stopIdle();
     if (this.#noCon) {
       this.#startup();
     }
-    this.#w.postMessage(mail);
+    this.#w.postMessage({
+      __mail: myID,
+      mail
+    });
+
+    return new Promise((res, rej) => {
+      this.#resolver.set(myID, {res, rej})
+    })
+  }
+
+  close() {
+    this.#w.terminate()
+    if(this.#idleTO) clearTimeout(this.#idleTO)
+
   }
 }
 
@@ -98,7 +129,11 @@ export class SMTPWorkerPool {
   send(mail: SendConfig) {
     this.#lastUsed = (this.#lastUsed + 1) % this.pool.length
 
-    this.pool[this.#lastUsed].send(mail)
+    return this.pool[this.#lastUsed].send(mail)
+  }
+
+  close() {
+    this.pool.forEach(v=>v.close())
   }
 }
 
