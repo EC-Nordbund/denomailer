@@ -1,23 +1,20 @@
-import { ConnectConfigWithAuthentication, SendConfig } from "./config.ts";
+import { SendConfig } from "./config.ts";
+import { ResolvedClientOptions } from "./entry.ts";
 
 export class SMTPWorker {
   #timeout: number;
 
   constructor(
-    config: ConnectConfigWithAuthentication,
-    { timeout = 60000, autoconnect = true } = {},
+    config: ResolvedClientOptions,
   ) {
     this.#config = config;
-    this.#timeout = timeout;
-    if(autoconnect) {
-      this.#startup();
-    }
+    this.#timeout = config.pool!.timeout;
   }
   #w!: Worker;
   #idleTO: number | null = null;
   #idleMode2 = false;
   #noCon = true;
-  #config: ConnectConfigWithAuthentication;
+  #config: ResolvedClientOptions;
 
   #startup() {
     this.#w = new Worker(new URL("./worker.ts", import.meta.url), {
@@ -89,11 +86,10 @@ export class SMTPWorkerPool {
   pool: SMTPWorker[] = []
 
   constructor(
-    config: ConnectConfigWithAuthentication,
-    { timeout = 60000, size = 2 } = {}
+    config: ResolvedClientOptions,
   ) {
-    for (let i = 0; i < size; i++) {
-      this.pool.push(new SMTPWorker(config, {timeout, autoconnect: i === 0}))
+    for (let i = 0; i < config.pool!.size; i++) {
+      this.pool.push(new SMTPWorker(config))
     }
   }
 
