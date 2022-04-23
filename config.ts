@@ -1,15 +1,4 @@
-interface ConnectConfig {
-  hostname: string;
-  port?: number;
-  tls?: boolean
-}
-
-interface ConnectConfigWithAuthentication extends ConnectConfig {
-  username: string;
-  password: string;
-}
-
-interface SendConfig {
+export interface SendConfig {
   to: mailList;
   cc?: mailList;
   bcc?: mailList;
@@ -66,7 +55,6 @@ export type mail = string | mailObject;
 export type mailListObject = Omit<Record<string, email>, "name" | "mail">;
 export type mailList = mailListObject | mail[] | mail;
 
-export type { ConnectConfig, ConnectConfigWithAuthentication, SendConfig };
 
 function isMail(mail: string) {
   return /[^<>()\[\]\\,;:\s@"]+@[a-zA-Z0-9]+\.([a-zA-Z0-9\-]+\.)*[a-zA-Z]{2,}$/

@@ -1,7 +1,5 @@
 import { CommandCode } from "./code.ts";
 import type {
-  ConnectConfig,
-  ConnectConfigWithAuthentication,
   SendConfig,
 } from "./config.ts";
 import {
@@ -20,13 +18,6 @@ interface Command {
   args: string;
 }
 
-interface SmtpClientOptions {
-  console_debug?: boolean;
-  unsecure?: boolean;
-  mailFilter?: (box: string, domain: string, internalTag?: string | symbol | undefined) => (Promise<boolean>  | boolean)
-  /** @deprecated use ONLY for debugging! enable this to make shure that \n and \r are differently encoded. But this will tripple their size!*/
-  encodeLB?: boolean
-}
 
 export class SmtpClient {
   #secure = false;
@@ -35,7 +26,7 @@ export class SmtpClient {
   #reader: TextProtoReader | null = null;
   #writer: BufWriter | null = null;
 
-  #mailFilter: SmtpClientOptions['mailFilter'] = () => true
+  #mailFilter = () => true
 
   constructor(private config: ResolvedClientOptions) {
     this.#ready = this.connect()
@@ -123,24 +114,18 @@ export class SmtpClient {
 
       const [from, fromData] = this.parseAddress(config.from);
 
-      const to = config.to ? await this.filterMails(normaliceMailList(config.to).map((m) => this.parseAddress(m)), config.internalTag) : false;
+      const to = config.to ? await normaliceMailList(config.to).map((m) => this.parseAddress(m)) : false
 
       const cc = config.cc
-        ? await this.filterMails(normaliceMailList(config.cc).map((v) => this.parseAddress(v)), config.internalTag)
+        ? await normaliceMailList(config.cc).map((v) => this.parseAddress(v))
         : false;
 
-      const bcc =config.bcc ? await this.filterMails(normaliceMailList(config.bcc).map((v) =>
+      const bcc = config.bcc ? normaliceMailList(config.bcc).map((v) =>
         this.parseAddress(v)
-      ), config.internalTag) : false;
+      ) : false;
 
       if (config.replyTo) {
         config.replyTo = normaliceMailString(config.replyTo);
-
-        const res = await this.filterMail([config.replyTo, config.replyTo], config.internalTag)
-
-        if(!res) {
-          throw new Error("ReplyTo Email is not vaild as the filter returned false")
-        }
       }
 
       const date = config.date ??
@@ -471,12 +456,6 @@ export class SmtpClient {
     await this.#writer.flush();
   }
 
-  private useAuthentication(
-    config: ConnectConfig | ConnectConfigWithAuthentication,
-  ): config is ConnectConfigWithAuthentication {
-    return (config as ConnectConfigWithAuthentication).username !== undefined;
-  }
-
   private parseAddress(
     email: string,
   ): [string, string] {
@@ -486,23 +465,5 @@ export class SmtpClient {
     } else {
       return [`<${email}>`, `<${email}>`];
     } 
-  }
-
-  private async filterMail([raw, _withName]: [string, string], internalTag: string | symbol | undefined): Promise<boolean> {
-    if(!this.#mailFilter) return true
-    
-    const [box, domain] = raw.slice(1, raw.length - 1).split('@')
-
-    const res = await this.#mailFilter!(box, domain, internalTag)
-
-    return res
-  }
-
-  private async filterMails(mails: [string, string][], internalTag: string | symbol | undefined): Promise<[string, string][]> {
-    if(!this.#mailFilter) return mails
-
-    const keep = await Promise.all(mails.map(m => this.filterMail(m, internalTag)))
-
-    return mails.filter((_, i) => keep[i])
   }
 }
