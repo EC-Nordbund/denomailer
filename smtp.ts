@@ -59,24 +59,12 @@ export class SmtpClient {
       this.#secure = true;
       await this.#connect(conn, config);
     } else {
-    const conn = await Deno.connect({
-      hostname: config.hostname,
-      port: config.port || 25,
-    });
-    await this.#connect(conn, config);
+      const conn = await Deno.connect({
+        hostname: config.hostname,
+        port: config.port || 25,
+      });
+      await this.#connect(conn, config);
     }
-  }
-
-  /**
-   * @deprecated Will be remove in v1
-   */
-  async connectTLS(config: ConnectConfig | ConnectConfigWithAuthentication) {
-    const conn = await Deno.connectTls({
-      hostname: config.hostname,
-      port: config.port || 465,
-    });
-    this.#secure = true;
-    await this.#connect(conn, config);
   }
 
   async close() {
