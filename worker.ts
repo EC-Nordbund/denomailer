@@ -5,7 +5,7 @@
 import { SmtpClient } from "./smtp.ts";
 import { SendConfig } from "./config.ts";
 
-const client = new SmtpClient({ console_debug: true });
+let client: SmtpClient
 
 let cb: () => void;
 const readyPromise = new Promise<void>((res) => {
@@ -27,7 +27,7 @@ async function send(config: SendConfig) {
 
 addEventListener("message", async (ev: MessageEvent) => {
   if (ev.data.__setup) {
-    await client.connect(ev.data.__setup);
+    client = new SmtpClient(ev.data.__setup);
     cb();
     return;
   }

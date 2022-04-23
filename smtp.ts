@@ -11,6 +11,7 @@ import {
 } from "./config.ts";
 import { BufReader, BufWriter, TextProtoReader } from "./deps.ts";
 import { base64Decode, quotedPrintableEncode } from "./encoding.ts";
+import { ResolvedClientOptions } from "./entry.ts";
 
 const encoder = new TextEncoder();
 
@@ -34,36 +35,28 @@ export class SmtpClient {
   #reader: TextProtoReader | null = null;
   #writer: BufWriter | null = null;
 
-  #console_debug = false;
-  #allowUnsecure = false;
-  #mailFilter: SmtpClientOptions['mailFilter']
+  #mailFilter: SmtpClientOptions['mailFilter'] = () => true
 
-  constructor({
-    console_debug = false,
-    unsecure = false,
-    mailFilter,
-    encodeLB = false
-  }: SmtpClientOptions = {}) {
-    this.#console_debug = console_debug;
-    this.#allowUnsecure = unsecure;
-    this.#mailFilter = mailFilter
-    this.#encodeLB = encodeLB
+  constructor(private config: ResolvedClientOptions) {
+    this.#ready = this.connect()
   }
 
-  async connect(config: ConnectConfig | ConnectConfigWithAuthentication) {
-    if(config.tls) {
+  #ready: Promise<void>
+
+  async connect() {
+    if(this.config.connection.tls) {
       const conn = await Deno.connectTls({
-        hostname: config.hostname,
-        port: config.port || 465,
+        hostname: this.config.connection.hostname,
+        port: this.config.connection.port
       });
       this.#secure = true;
-      await this.#connect(conn, config);
+      await this.#connect(conn);
     } else {
       const conn = await Deno.connect({
-        hostname: config.hostname,
-        port: config.port || 25,
+        hostname: this.config.connection.hostname,
+        port: this.config.connection.port
       });
-      await this.#connect(conn, config);
+      await this.#connect(conn);
     }
   }
 
@@ -85,7 +78,7 @@ export class SmtpClient {
   #idlePromise = Promise.resolve()
   #idleCB = () => {}
 
-  #encodeLB = false
+  // #encodeLB = false
 
   #currentlySending = false;
   #sending: (() => void)[] = [];
@@ -122,7 +115,7 @@ export class SmtpClient {
   }
 
   async send(config: SendConfig) {
-
+    await this.#ready
     try {
       await this.#cueSending();
 
@@ -173,7 +166,7 @@ export class SmtpClient {
         if (config.content) {
           config.mimeContent.push({
             mimeType: 'text/plain; charset="utf-8"',
-            content: quotedPrintableEncode(config.content, this.#encodeLB),
+            content: quotedPrintableEncode(config.content, this.config.debug.encodeLB),
             transferEncoding: "quoted-printable",
           });
         }
@@ -187,12 +180,12 @@ export class SmtpClient {
 
           config.mimeContent.push({
             mimeType: 'text/html; charset="utf-8"',
-            content: quotedPrintableEncode(config.html),
+            content: quotedPrintableEncode(config.html, this.config.debug.encodeLB),
             transferEncoding: "quoted-printable",
           });
 
-          if(this.#console_debug) {
-            console.log(config.mimeContent.at(-1)?.content, this.#encodeLB)
+          if(this.config.debug.log) {
+            console.log(config.mimeContent.at(-1)?.content)
           }
         }
       }
@@ -356,7 +349,7 @@ export class SmtpClient {
     }
   }
 
-  async #connect(conn: Deno.Conn, config: ConnectConfig) {
+  async #connect(conn: Deno.Conn) {
     this.#conn = conn;
     this.#_reader = new BufReader(this.#conn);
     this.#writer = new BufWriter(this.#conn);
@@ -364,7 +357,7 @@ export class SmtpClient {
 
     this.assertCode(await this.readCmd(), CommandCode.READY);
 
-    await this.writeCmd("EHLO", config.hostname);
+    await this.writeCmd("EHLO", this.config.connection.hostname);
 
     while (true) {
       const cmd = await this.readCmd();
@@ -384,7 +377,7 @@ export class SmtpClient {
       this.assertCode(await this.readCmd(), CommandCode.READY);
 
       this.#conn = await Deno.startTls(this.#conn, {
-        hostname: config.hostname,
+        hostname: this.config.connection.hostname,
       });
 
       this.#secure = true;
@@ -393,7 +386,7 @@ export class SmtpClient {
       this.#writer = new BufWriter(this.#conn);
       this.#reader = new TextProtoReader(this.#_reader);
 
-      await this.writeCmd("EHLO", config.hostname);
+      await this.writeCmd("EHLO", this.config.connection.hostname);
 
       while (true) {
         const cmd = await this.readCmd();
@@ -401,20 +394,20 @@ export class SmtpClient {
       }
     }
 
-    if (!this.#allowUnsecure && !this.#secure) {
+    if (!this.config.debug.allowUnsecure && !this.#secure) {
       throw new Error(
         "Connection is not secure! Don't send authentication over non secure connection!",
       );
     }
 
-    if (this.useAuthentication(config)) {
+    if (this.config.connection.auth) {
       await this.writeCmd("AUTH", "LOGIN");
       this.assertCode(await this.readCmd(), 334);
 
-      await this.writeCmd(btoa(config.username));
+      await this.writeCmd(btoa(this.config.connection.auth.username));
       this.assertCode(await this.readCmd(), 334);
 
-      await this.writeCmd(btoa(config.password));
+      await this.writeCmd(btoa(this.config.connection.auth.password));
       this.assertCode(await this.readCmd(), CommandCode.AUTHO_SUCCESS);
     }
 
@@ -436,7 +429,7 @@ export class SmtpClient {
     }
     const result = await this.#reader.readLine();
 
-    if (this.#console_debug) {
+    if (this.config.debug.log) {
       console.log(result);
     }
 
@@ -454,7 +447,7 @@ export class SmtpClient {
       return null;
     }
 
-    if (this.#console_debug) {
+    if (this.config.debug.log) {
       console.table(args);
     }
 
@@ -468,7 +461,7 @@ export class SmtpClient {
       return null;
     }
 
-    if (this.#console_debug) {
+    if (this.config.debug.log) {
       console.table(args.map(() => "Uint8Attay"));
     }
 

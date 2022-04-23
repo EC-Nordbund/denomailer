@@ -101,7 +101,7 @@ export class SMTPWorker {
       mail
     });
 
-    return new Promise((res, rej) => {
+    return new Promise<void>((res, rej) => {
       this.#resolver.set(myID, {res, rej})
     })
   }
@@ -109,7 +109,6 @@ export class SMTPWorker {
   close() {
     this.#w.terminate()
     if(this.#idleTO) clearTimeout(this.#idleTO)
-
   }
 }
 
