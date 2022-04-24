@@ -1,4 +1,4 @@
-cname: test
+name: test
 
 on:
   push:
