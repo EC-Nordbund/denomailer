@@ -257,19 +257,64 @@ export class SmtpClient {
 
       await this.writeCmd("MIME-Version: 1.0");
 
-      await this.writeCmd(
-        "Content-Type: multipart/mixed; boundary=attachment",
-        "\r\n",
+      let boundaryAdditionAtt = 100;
+      // calc msg boundary
+      // TODO: replace this with a match or so.
+      config.mimeContent.map((v) => v.content).join("\n").replace(
+        new RegExp("--attachment(\d+)", "g"),
+        (_, numb) => {
+          boundaryAdditionAtt += parseInt(numb, 10);
+
+          return "";
+        },
       );
-      await this.writeCmd("--attachment");
+
+      const dec = new TextDecoder();
+
+      if(!config.attachments) config.attachments = []
+
+      config.attachments.map((v) => {
+        if (v.encoding === "text") return v.content;
+
+        const arr = new Uint8Array(v.encoding === 'base64' ? base64Decode(v.content) : v.content);
+
+        return dec.decode(arr);
+      }).join("\n").replace(new RegExp("--attachment(\d+)", "g"), (_, numb) => {
+        boundaryAdditionAtt += parseInt(numb, 10);
+
+        return "";
+      });
+
+      const attachmentBoundary = `attachment${boundaryAdditionAtt}`;
+
+      let boundaryAddition = 100;
+      // calc msg boundary
+      // TODO: replace this with a match or so.
+      config.mimeContent.map((v) => v.content).join("\n").replace(
+        new RegExp("--message(\d+)", "g"),
+        (_, numb) => {
+          boundaryAddition += parseInt(numb, 10);
+
+          return "";
+        },
+      );
+
+      const messageBoundary = `message${boundaryAddition}`;
+
 
       await this.writeCmd(
-        "Content-Type: multipart/alternative; boundary=message",
+        `Content-Type: multipart/mixed; boundary=${attachmentBoundary}`,
+        "\r\n",
+      );
+      await this.writeCmd(`--${attachmentBoundary}`);
+
+      await this.writeCmd(
+        `Content-Type: multipart/alternative; boundary=${messageBoundary}`,
         "\r\n",
       );
 
       for (let i = 0; i < config.mimeContent.length; i++) {
-        await this.writeCmd("--message");
+        await this.writeCmd(`--${messageBoundary}`);
         await this.writeCmd(
           "Content-Type: " + config.mimeContent[i].mimeType,
         );
@@ -287,14 +332,14 @@ export class SmtpClient {
         await this.writeCmd(config.mimeContent[i].content, "\r\n");
       }
 
-      await this.writeCmd("--message--\r\n");
+      await this.writeCmd(`--${messageBoundary}--\r\n`);
 
       if (config.attachments) {
         // Setup attachments
         for (let i = 0; i < config.attachments.length; i++) {
           const attachment = config.attachments[i];
 
-          await this.writeCmd("--attachment");
+          await this.writeCmd(`--${attachmentBoundary}`);
           await this.writeCmd(
             "Content-Type:",
             attachment.contentType + ";",
@@ -331,7 +376,7 @@ export class SmtpClient {
         }
       }
 
-      await this.writeCmd("--attachment--\r\n");
+      await this.writeCmd(`--${attachmentBoundary}--\r\n`);
 
       await this.writeCmd(".\r\n");
 
