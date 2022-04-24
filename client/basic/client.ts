@@ -184,11 +184,14 @@ export class SMTPClient {
         const arr = new Uint8Array(v.content);
 
         return dec.decode(arr);
-      }).join("\n").replace(new RegExp("--attachment([0-9]+)", "g"), (_, numb) => {
-        boundaryAdditionAtt += parseInt(numb, 10);
+      }).join("\n").replace(
+        new RegExp("--attachment([0-9]+)", "g"),
+        (_, numb) => {
+          boundaryAdditionAtt += parseInt(numb, 10);
 
-        return "";
-      });
+          return "";
+        },
+      );
 
       const attachmentBoundary = `attachment${boundaryAdditionAtt}`;
 
