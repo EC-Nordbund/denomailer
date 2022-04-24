@@ -5,5 +5,5 @@ export function getEmails(): Promise<any[]> {
 }
 
 export function clearEmails() {
-  return fetch('http://localhost:1080/api/emails', {method: 'delete'})
+  return fetch('http://localhost:1080/api/emails', {method: 'delete'}).then(v=>v.arrayBuffer())
 }

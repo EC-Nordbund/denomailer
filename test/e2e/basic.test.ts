@@ -1,5 +1,5 @@
 import { getEmails, clearEmails } from "../fake-smtp.ts";
-import { assert } from "https://deno.land/std@0.136.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.136.0/testing/asserts.ts";
 import { SMTPClient } from "../../mod.ts";
 
 Deno.test('test simplest mail', async () => {
@@ -8,11 +8,13 @@ Deno.test('test simplest mail', async () => {
   const client = new SMTPClient({
     debug: {
       allowUnsecure: true,
-      log: true
+      log: true,
+      noStartTLS: true
     },
     connection: {
       hostname: 'localhost',
-      port: 1025
+      port: 1025,
+      tls: false
     }
   })
 
@@ -24,5 +26,6 @@ Deno.test('test simplest mail', async () => {
   })
 
   const mails = await getEmails()
-  assert(mails.length, 1)
+  assertEquals(mails.length, 1)
+  await client.close()
 })
