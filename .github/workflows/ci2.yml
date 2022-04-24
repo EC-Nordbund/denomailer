@@ -13,5 +13,8 @@ jobs:
       - uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
-      - run: docker run -d reachfive/fake-smtp-server
+      - run: docker run -d -p 1080:1080 reachfive/fake-smtp-server
+      - run: curl http://localhost:1080/api/emails
       - run: deno run ./mod.ts
+      - run: deno fmt --check
+      - run: deno lint
