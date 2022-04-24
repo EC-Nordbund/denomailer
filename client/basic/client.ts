@@ -168,7 +168,7 @@ export class SMTPClient {
       // calc msg boundary
       // TODO: replace this with a match or so.
       config.mimeContent.map((v) => v.content).join("\n").replace(
-        new RegExp("--attachment(\d+)", "g"),
+        new RegExp("--attachment([0-9]+)", "g"),
         (_, numb) => {
           boundaryAdditionAtt += parseInt(numb, 10);
 
@@ -184,7 +184,7 @@ export class SMTPClient {
         const arr = new Uint8Array(v.content);
 
         return dec.decode(arr);
-      }).join("\n").replace(new RegExp("--attachment(\d+)", "g"), (_, numb) => {
+      }).join("\n").replace(new RegExp("--attachment([0-9]+)", "g"), (_, numb) => {
         boundaryAdditionAtt += parseInt(numb, 10);
 
         return "";
@@ -202,7 +202,7 @@ export class SMTPClient {
       // calc msg boundary
       // TODO: replace this with a match or so.
       config.mimeContent.map((v) => v.content).join("\n").replace(
-        new RegExp("--message(\d+)", "g"),
+        new RegExp("--message([0-9]+)", "g"),
         (_, numb) => {
           boundaryAddition += parseInt(numb, 10);
 
