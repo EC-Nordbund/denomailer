@@ -10,15 +10,20 @@ assignees: mathe42
 <!-- For security relevant bugs please contact us via mail! -->
 
 ## Describe the bug
+
 A clear and concise description of what the bug is.
 
 ## To Reproduce
-Provide a code example (without your actual password etc.) make it as minimal as you can.
+
+Provide a code example (without your actual password etc.) make it as minimal as
+you can.
 
 ## Expected behavior
+
 A clear and concise description of what you expected to happen.
 
 ## Logs
+
 Provide the output of `deno --version`
 
 ```
@@ -44,4 +49,6 @@ openssl s_client -debug -crlf -connect your-host.de:25
 ```
 
 ## Additional context
-Add any other context about the problem here. Is there a older version you know where this was working?
+
+Add any other context about the problem here. Is there a older version you know
+where this was working?
