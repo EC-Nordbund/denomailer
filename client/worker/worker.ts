@@ -68,7 +68,13 @@ export class SMTPWorker {
     );
 
     this.#w.postMessage({
-      __setup: this.#config,
+      __setup: {
+        ...this.#config,
+        client: {
+          ...this.#config.client,
+          preprocessors: [],
+        },
+      },
     });
 
     this.#noCon = false;
@@ -120,7 +126,7 @@ export class SMTPWorker {
   }
 
   close() {
-    this.#w.terminate();
+    if (this.#w) this.#w.terminate();
     if (this.#idleTO) {
       clearTimeout(this.#idleTO);
     }

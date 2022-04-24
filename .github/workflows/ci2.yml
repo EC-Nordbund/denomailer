@@ -14,6 +14,6 @@ jobs:
         with:
           deno-version: v1.x
       - run: docker run -d -p 1080:1080 -p 1025:1025 reachfive/fake-smtp-server
-      - run: deno test -A ./test/e2e/basic.test.ts
+      - run: deno test --unstable -A ./test/e2e/basic.test.ts
       - run: deno fmt --check
       - run: deno lint
