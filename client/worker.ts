@@ -19,6 +19,7 @@ export class SMTPWorker {
 
   #resolver = new Map<
     number,
+    // deno-lint-ignore no-explicit-any
     { res: (res: any) => void; rej: (err: Error) => void }
   >();
 
@@ -34,10 +35,12 @@ export class SMTPWorker {
         namespace: true,
       },
       // This allowes the deno option so only for pool and worker we need --unstable
+      // deno-lint-ignore no-explicit-any
     } as any);
 
     this.#w.addEventListener(
       "message",
+      // deno-lint-ignore no-explicit-any
       (ev: MessageEvent<boolean | { __ret: number; res: any; err: any }>) => {
         if (typeof ev.data === "object") {
           if ("err" in ev.data) {
