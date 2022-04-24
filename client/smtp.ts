@@ -10,9 +10,41 @@ const CommandCode = {
   FAIL: 554,
 };
 
+class QUE {
+  running = false
+  #que: (() => void)[] = []
+  idle: Promise<void> = Promise.resolve()
+  #idbleCB?: () => void 
 
-export class SmtpClient {
+  que(): Promise<void> {
+    if(!this.running) {
+      this.running = true
+      this.idle = new Promise((res) => {
+        this.#idbleCB = res
+      })
+      return Promise.resolve()
+    }
+
+    return new Promise<void>((res) => {
+      this.#que.push(res)
+    })
+  }
+
+  next() {
+    if(this.#que.length === 0) {
+      this.running = false
+      if(this.#idbleCB) this.#idbleCB()
+      return
+    }
+
+    this.#que[0]()
+    this.#que.splice(0, 1)
+  }
+}
+
+export class SMTPClient {
   #connection: SMTPConnection
+  #que = new QUE()
 
   constructor(private config: ResolvedClientOptions) {
     const c = new SMTPConnection(config)
@@ -20,67 +52,28 @@ export class SmtpClient {
 
     this.#ready = (async () => {
       await c.ready
-      await this.prepareConnection()
+      await this.#prepareConnection()
     })()
   }
 
   #ready: Promise<void>
 
-  async close() {
-    await this.#connection.close()
+  close() {
+    return this.#connection.close()
   }
 
   get isSending() {
-    return this.#currentlySending
+    return this.#que.running
   }
 
   get idle() {
-    return this.#idlePromise
-  }
-
-  #idlePromise = Promise.resolve()
-  #idleCB = () => {}
-
-  // #encodeLB = false
-
-  #currentlySending = false;
-  #sending: (() => void)[] = [];
-
-  #cueSending() {
-    if (!this.#currentlySending) {
-      this.#idlePromise = new Promise((res) => {
-        this.#idleCB = res
-      })
-      this.#currentlySending = true;
-      return;
-    }
-
-    return new Promise<void>((res) => {
-      this.#sending.push(() => {
-        this.#currentlySending = true;
-        res();
-      });
-    });
-  }
-
-  #queNextSending() {
-    if (this.#sending.length === 0) {
-      this.#currentlySending = false;
-      this.#idleCB()
-      return;
-    }
-
-    const run = this.#sending[0];
-
-    this.#sending.splice(0, 1);
-
-    queueMicrotask(run);
+    return this.#que.idle
   }
 
   async send(config: ResolvedSendConfig) {
     await this.#ready
     try {
-      await this.#cueSending();
+      await this.#que.que()
 
       await this.#connection.writeCmd("MAIL", "FROM:", `<${config.from.mail}>`);
       this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
@@ -204,15 +197,16 @@ export class SmtpClient {
       await this.#connection.writeCmd(".\r\n");
 
       this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
+      await this.#cleanup()
+      this.#que.next();
     } catch (ex) {
-      this.#queNextSending();
+      await this.#cleanup()
+      this.#que.next();
       throw ex;
     }
-    await this.#cleanup()
-    this.#queNextSending();
   }
 
-  async prepareConnection() {
+  async #prepareConnection() {
     this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.READY);
 
     await this.#connection.writeCmd("EHLO", this.config.connection.hostname);
