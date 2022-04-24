@@ -1,4 +1,4 @@
-import { ResolvedSendConfig } from "../mail/mod.ts";
+import { ResolvedSendConfig } from "./mail/mod.ts";
 
 export interface ResolvedClientOptions {
   debug: {

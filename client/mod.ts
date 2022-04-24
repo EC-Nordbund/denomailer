@@ -5,7 +5,7 @@ import {
   ClientOptions,
   resolveClientOptions,
   ResolvedClientOptions,
-} from "../config/client/mod.ts";
+} from "../config/client.ts";
 import {
   resolveSendConfig,
   SendConfig,

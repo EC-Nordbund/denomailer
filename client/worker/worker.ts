@@ -1,5 +1,5 @@
 import { ResolvedSendConfig } from "../../config/mail/mod.ts";
-import { ResolvedClientOptions } from "../../config/client/mod.ts";
+import { ResolvedClientOptions } from "../../config/client.ts";
 
 export class SMTPWorker {
   id = 1;

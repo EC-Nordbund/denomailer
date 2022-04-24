@@ -1,5 +1,5 @@
 import type { ResolvedSendConfig } from "../../config/mail/mod.ts";
-import { ResolvedClientOptions } from "../../config/client/mod.ts";
+import { ResolvedClientOptions } from "../../config/client.ts";
 import { SMTPConnection } from "./connection.ts";
 
 const CommandCode = {

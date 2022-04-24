@@ -12,7 +12,7 @@ import {
   saveMailObject,
   validateEmailList,
 } from "./email.ts";
-import { ResolvedClientOptions } from "../client/mod.ts";
+import { ResolvedClientOptions } from "../client.ts";
 
 export interface SendConfig {
   to: mailList;
