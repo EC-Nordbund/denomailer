@@ -217,17 +217,16 @@ export class SmtpClient {
 
     await this.#connection.writeCmd("EHLO", this.config.connection.hostname);
 
-    while (true) {
-      const cmd = await this.#connection.readCmd();
-
-      if(!cmd) break
-
-      // Trim args
-      const cleanCMD = cmd.args[0] === '-' ? cmd.args.slice(1) : cmd.args
-
-      this.#supportedFeatures.add(cleanCMD)
-
-      if(cmd.args[0] !== '-') break
+    const cmd = await this.#connection.readCmd();
+    
+    if(!cmd) throw new Error("Unexpected empty response");
+    
+    if(typeof cmd.args === 'string') {
+      this.#supportedFeatures.add(cmd.args)
+    } else {
+      cmd.args.forEach(cmd => {
+        this.#supportedFeatures.add(cmd)
+      })
     }
 
     if (this.#supportedFeatures.has('STARTTLS')) {
@@ -242,10 +241,7 @@ export class SmtpClient {
 
       await this.#connection.writeCmd("EHLO", this.config.connection.hostname);
 
-      while (true) {
-        const cmd = await this.#connection.readCmd();
-        if (!cmd || !cmd.args.startsWith("-")) break;
-      }
+      await this.#connection.readCmd();
     }
 
     if (!this.config.debug.allowUnsecure && !this.#connection.secure) {

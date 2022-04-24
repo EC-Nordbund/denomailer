@@ -5,7 +5,7 @@ const encoder = new TextEncoder();
 
 interface Command {
   code: number;
-  args: string;
+  args: string | (string[]);
 }
 
 export class SMTPConnection {
@@ -66,19 +66,24 @@ export class SMTPConnection {
     if (!this.#reader) {
       return null;
     }
-    const result = await this.#reader.readLine();
 
-    if (this.config.debug.log) {
-      console.log(result);
+    const result: (string | null)[] = []
+
+    while (result.length === 0 || (result.at(-1) && result.at(-1)!.at(3) !== '-')) {
+      result.push(await this.#reader.readLine())
     }
 
-    if (result === null) return null;
-    const cmdCode = parseInt(result.slice(0, 3).trim());
-    const cmdArgs = result.slice(3).trim();
+    const nonNullResult: string[] = (result.at(-1)===null ? result.slice(0, result.length-1) : result) as any
+
+    if(nonNullResult.length === 0) return null
+
+    const code = parseInt(nonNullResult[0].slice(0,3))
+    const data = nonNullResult.map(v=>v.slice(4).trim())
+
     return {
-      code: cmdCode,
-      args: cmdArgs,
-    };
+      code,
+      args: data
+    }
   }
 
   public async writeCmd(...args: string[]) {
