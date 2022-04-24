@@ -3,7 +3,7 @@
 /// <reference lib="deno.unstable" />
 
 import { SmtpClient } from "./smtp.ts";
-import { SendConfig } from "./config.ts";
+import { ResolvedSendConfig } from "../config/mail/mod.ts";
 
 let client: SmtpClient
 
@@ -14,7 +14,7 @@ const readyPromise = new Promise<void>((res) => {
 
 let hasIdlePromise = false;
 
-async function send(config: SendConfig) {
+async function send(config: ResolvedSendConfig) {
   client.send(config);
 
   if (!hasIdlePromise) {

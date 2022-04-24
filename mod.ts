@@ -1,4 +1,3 @@
-export type { SendConfig } from "./config.ts";
-export { createSMTPConnection } from './entry.ts'
-export type { ClientOptions } from './entry.ts'
-
+export type { SendConfig } from "./config/mail/mod.ts";
+export { SMTPHandler } from './client/mod.ts'
+export type { ClientOptions } from './config/client/mod.ts'

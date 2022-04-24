@@ -1,7 +1,3 @@
-import { SendConfig } from "./config.ts";
-import { SMTPWorker, SMTPWorkerPool } from "./pool.ts";
-import { SmtpClient } from "./smtp.ts";
-
 export interface ResolvedClientOptions {
   debug: {
     log: boolean
@@ -20,6 +16,9 @@ export interface ResolvedClientOptions {
   pool?: {
     size: number
     timeout: number 
+  }
+  client: {
+    warning: 'ignore' | 'log' | 'error'
   }
 }
 
@@ -78,11 +77,13 @@ export interface ClientOptions {
      */
     timeout?: number 
   } | boolean
+  client?: {
+    warning?: 'ignore' | 'log' | 'error'
+  }
 }
 
-
-export function createSMTPConnection(config: ClientOptions): SMTPHandler {
-  const newConfig: ResolvedClientOptions = {
+export function resolveClientOptions(config: ClientOptions): ResolvedClientOptions {
+  return {
     debug: {
       log: config.debug?.log ?? false,
       allowUnsecure: config.debug?.allowUnsecure ?? false,
@@ -100,28 +101,10 @@ export function createSMTPConnection(config: ClientOptions): SMTPHandler {
     } : {
       size: config.pool.size ?? 2,
       timeout: config.pool.timeout ?? 60000
-    }) : undefined)
+    }) : undefined),
+    client: {
+      warning: config.client?.warning ?? 'log'
+    }
   }
-
-  if(newConfig.debug?.log) {
-    console.log('used resolved config')
-    console.log('.debug')
-    console.table(newConfig.debug)
-    console.log('.connection')
-    console.table({...newConfig.connection, ...newConfig.connection.auth ? {auth: JSON.stringify(newConfig.connection.auth)} : {}})
-    console.log('.pool')
-    console.table(newConfig.pool)
-  }
-
-
-  const Client = newConfig.pool ? (newConfig.pool.size > 1 ? SMTPWorkerPool : SMTPWorker) : SmtpClient
-
-  const handler = new Client(newConfig)
-
-  return handler
 }
 
-export interface SMTPHandler {
-  send(config: SendConfig): Promise<void>
-  close(): void
-}

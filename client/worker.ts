@@ -1,12 +1,12 @@
-import { SendConfig } from "./config.ts";
-import { ResolvedClientOptions } from "./entry.ts";
+import { ResolvedSendConfig } from "../config/mail/mod.ts";
+import { ResolvedClientOptions } from '../config/client/mod.ts';
 
 export class SMTPWorker {
-  id = 1
+  id = 1;
   #timeout: number;
 
   constructor(
-    config: ResolvedClientOptions,
+    config: ResolvedClientOptions
   ) {
     this.#config = config;
     this.#timeout = config.pool!.timeout;
@@ -17,10 +17,10 @@ export class SMTPWorker {
   #noCon = true;
   #config: ResolvedClientOptions;
 
-  #resolver = new Map<number, {res: (res: any) => void, rej: (err: Error) => void}>()
+  #resolver = new Map<number, { res: (res: any) => void; rej: (err: Error) => void; }>();
 
   #startup() {
-    this.#w = new Worker(new URL("./worker.ts", import.meta.url), {
+    this.#w = new Worker(new URL("./worker-file.ts", import.meta.url), {
       type: "module",
       deno: {
         permissions: {
@@ -33,24 +33,24 @@ export class SMTPWorker {
       // This allowes the deno option so only for pool and worker we need --unstable
     } as any);
 
-    this.#w.addEventListener("message", (ev: MessageEvent<boolean|{__ret: number, res: any, err: any}>) => {
+    this.#w.addEventListener("message", (ev: MessageEvent<boolean | { __ret: number; res: any; err: any; }>) => {
       if(typeof ev.data === 'object') {
         if('err' in ev.data) {
-          this.#resolver.get(ev.data.__ret)?.rej(ev.data.err)
+          this.#resolver.get(ev.data.__ret)?.rej(ev.data.err);
         }
 
         if('res' in ev.data) {
-          this.#resolver.get(ev.data.__ret)?.res(ev.data.res)
+          this.#resolver.get(ev.data.__ret)?.res(ev.data.res);
         }
 
-        this.#resolver.delete(ev.data.__ret)
-        return 
+        this.#resolver.delete(ev.data.__ret);
+        return;
       }
 
-      if (ev.data) {
+      if(ev.data) {
         this.#stopIdle();
       } else {
-        if (this.#idleMode2) {
+        if(this.#idleMode2) {
           this.#cleanup();
         } else {
           this.#startIdle();
@@ -67,7 +67,8 @@ export class SMTPWorker {
 
   #startIdle() {
     console.log("started idle");
-    if (this.#idleTO) return;
+    if(this.#idleTO)
+      return;
 
     this.#idleTO = setTimeout(() => {
       console.log("idle mod 2");
@@ -77,7 +78,8 @@ export class SMTPWorker {
   }
 
   #stopIdle() {
-    if (this.#idleTO) clearTimeout(this.#idleTO);
+    if(this.#idleTO)
+      clearTimeout(this.#idleTO);
 
     this.#idleMode2 = false;
     this.#idleTO = null;
@@ -89,11 +91,11 @@ export class SMTPWorker {
     this.#stopIdle();
   }
 
-  public send(mail: SendConfig) {
-    const myID = this.id
-    this.id++
+  public send(mail: ResolvedSendConfig) {
+    const myID = this.id;
+    this.id++;
     this.#stopIdle();
-    if (this.#noCon) {
+    if(this.#noCon) {
       this.#startup();
     }
     this.#w.postMessage({
@@ -102,37 +104,13 @@ export class SMTPWorker {
     });
 
     return new Promise<void>((res, rej) => {
-      this.#resolver.set(myID, {res, rej})
-    })
+      this.#resolver.set(myID, { res, rej });
+    });
   }
 
   close() {
-    this.#w.terminate()
-    if(this.#idleTO) clearTimeout(this.#idleTO)
+    this.#w.terminate();
+    if(this.#idleTO)
+      clearTimeout(this.#idleTO);
   }
 }
-
-export class SMTPWorkerPool {
-  pool: SMTPWorker[] = []
-
-  constructor(
-    config: ResolvedClientOptions,
-  ) {
-    for (let i = 0; i < config.pool!.size; i++) {
-      this.pool.push(new SMTPWorker(config))
-    }
-  }
-
-  #lastUsed = -1
-
-  send(mail: SendConfig) {
-    this.#lastUsed = (this.#lastUsed + 1) % this.pool.length
-
-    return this.pool[this.#lastUsed].send(mail)
-  }
-
-  close() {
-    this.pool.forEach(v=>v.close())
-  }
-}
-
