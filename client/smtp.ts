@@ -1,6 +1,6 @@
 import type { ResolvedSendConfig } from "../config/mail/mod.ts";
-import { BufReader, BufWriter, TextProtoReader } from "../deps.ts";
 import { ResolvedClientOptions } from '../config/client/mod.ts'
+import { SMTPConnection } from "./connection.ts";
 
 const CommandCode = {
   READY: 220,
@@ -11,48 +11,23 @@ const CommandCode = {
 };
 
 
-const encoder = new TextEncoder();
-
-interface Command {
-  code: number;
-  args: string;
-}
-
 export class SmtpClient {
-  #secure = false;
-
-  #conn: Deno.Conn | null = null;
-  #reader: TextProtoReader | null = null;
-  #writer: BufWriter | null = null;
+  #connection: SMTPConnection
 
   constructor(private config: ResolvedClientOptions) {
-    this.#ready = this.connect()
+    const c = new SMTPConnection(config)
+    this.#connection = c
+
+    this.#ready = (async () => {
+      await c.ready
+      await this.prepareConnection()
+    })()
   }
 
   #ready: Promise<void>
 
-  async connect() {
-    if(this.config.connection.tls) {
-      const conn = await Deno.connectTls({
-        hostname: this.config.connection.hostname,
-        port: this.config.connection.port
-      });
-      this.#secure = true;
-      await this.#connect(conn);
-    } else {
-      const conn = await Deno.connect({
-        hostname: this.config.connection.hostname,
-        port: this.config.connection.port
-      });
-      await this.#connect(conn);
-    }
-  }
-
   async close() {
-    if (!this.#conn) {
-      return;
-    }
-    await this.#conn.close();
+    await this.#connection.close()
   }
 
   get isSending() {
@@ -107,128 +82,128 @@ export class SmtpClient {
     try {
       await this.#cueSending();
 
-      await this.writeCmd("MAIL", "FROM:", `<${config.from.mail}>`);
-      this.assertCode(await this.readCmd(), CommandCode.OK);
+      await this.#connection.writeCmd("MAIL", "FROM:", `<${config.from.mail}>`);
+      this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
 
       for (let i = 0; i < config.to.length; i++) {
-        await this.writeCmd("RCPT", "TO:", `<${config.to[i].mail}>`);
-        this.assertCode(await this.readCmd(), CommandCode.OK);
+        await this.#connection.writeCmd("RCPT", "TO:", `<${config.to[i].mail}>`);
+        this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
       }
 
       for (let i = 0; i < config.cc.length; i++) {
-        await this.writeCmd("RCPT", "TO:", `<${config.cc[i].mail}>`);
-        this.assertCode(await this.readCmd(), CommandCode.OK);
+        await this.#connection.writeCmd("RCPT", "TO:", `<${config.cc[i].mail}>`);
+        this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
       }
 
       for (let i = 0; i < config.bcc.length; i++) {
-        await this.writeCmd("RCPT", "TO:", `<${config.bcc[i].mail}>`);
-        this.assertCode(await this.readCmd(), CommandCode.OK);
+        await this.#connection.writeCmd("RCPT", "TO:", `<${config.bcc[i].mail}>`);
+        this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
       }
 
-      await this.writeCmd("DATA");
-      this.assertCode(await this.readCmd(), CommandCode.BEGIN_DATA);
+      await this.#connection.writeCmd("DATA");
+      this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.BEGIN_DATA);
 
-      await this.writeCmd("Subject: ", config.subject);
-      await this.writeCmd("From: ", `${config.from.name} <${config.from.mail}>`);
+      await this.#connection.writeCmd("Subject: ", config.subject);
+      await this.#connection.writeCmd("From: ", `${config.from.name} <${config.from.mail}>`);
       if(config.to.length > 0){
-        await this.writeCmd("To: ", config.to.map((m) => `${m.name} <${m.mail}>`).join(";"));
+        await this.#connection.writeCmd("To: ", config.to.map((m) => `${m.name} <${m.mail}>`).join(";"));
       }
       if(config.cc.length > 0){
-        await this.writeCmd("Cc: ", config.cc.map((m) => `${m.name} <${m.mail}>`).join(";"));
+        await this.#connection.writeCmd("Cc: ", config.cc.map((m) => `${m.name} <${m.mail}>`).join(";"));
       }
       
-      await this.writeCmd("Date: ", config.date);
+      await this.#connection.writeCmd("Date: ", config.date);
 
       if (config.inReplyTo) {
-        await this.writeCmd("InReplyTo: ", config.inReplyTo);
+        await this.#connection.writeCmd("InReplyTo: ", config.inReplyTo);
       }
 
       if (config.references) {
-        await this.writeCmd("Refrences: ", config.references);
+        await this.#connection.writeCmd("Refrences: ", config.references);
       }
 
       if (config.replyTo) {
-        await this.writeCmd("ReplyTo: ", `${config.replyTo.name} <${config.replyTo.name}>`);
+        await this.#connection.writeCmd("ReplyTo: ", `${config.replyTo.name} <${config.replyTo.name}>`);
       }
 
       if (config.priority) {
-        await this.writeCmd("Priority:", config.priority);
+        await this.#connection.writeCmd("Priority:", config.priority);
       }
 
-      await this.writeCmd("MIME-Version: 1.0");
+      await this.#connection.writeCmd("MIME-Version: 1.0");
 
-      await this.writeCmd(
+      await this.#connection.writeCmd(
         "Content-Type: multipart/mixed; boundary=attachment",
         "\r\n",
       );
-      await this.writeCmd("--attachment");
+      await this.#connection.writeCmd("--attachment");
 
-      await this.writeCmd(
+      await this.#connection.writeCmd(
         "Content-Type: multipart/alternative; boundary=message",
         "\r\n",
       );
 
       for (let i = 0; i < config.mimeContent.length; i++) {
-        await this.writeCmd("--message");
-        await this.writeCmd(
+        await this.#connection.writeCmd("--message");
+        await this.#connection.writeCmd(
           "Content-Type: " + config.mimeContent[i].mimeType,
         );
         if (config.mimeContent[i].transferEncoding) {
-          await this.writeCmd(
+          await this.#connection.writeCmd(
             `Content-Transfer-Encoding: ${
               config.mimeContent[i].transferEncoding
             }` + "\r\n",
           );
         } else {
           // Send new line
-          await this.writeCmd("");
+          await this.#connection.writeCmd("");
         }
 
-        await this.writeCmd(config.mimeContent[i].content, "\r\n");
+        await this.#connection.writeCmd(config.mimeContent[i].content, "\r\n");
       }
 
-      await this.writeCmd("--message--\r\n");
+      await this.#connection.writeCmd("--message--\r\n");
 
       for (let i = 0; i < config.attachments.length; i++) {
         const attachment = config.attachments[i];
 
-        await this.writeCmd("--attachment");
-        await this.writeCmd(
+        await this.#connection.writeCmd("--attachment");
+        await this.#connection.writeCmd(
           "Content-Type:",
           attachment.contentType + ";",
           "name=" + attachment.filename,
         );
 
-        await this.writeCmd(
+        await this.#connection.writeCmd(
           "Content-Disposition: attachment; filename=" + attachment.filename,
           "\r\n",
         );
 
         if (attachment.encoding === "binary") {
-          await this.writeCmd("Content-Transfer-Encoding: binary");
+          await this.#connection.writeCmd("Content-Transfer-Encoding: binary");
 
           if (
             attachment.content instanceof ArrayBuffer ||
             attachment.content instanceof SharedArrayBuffer
           ) {
-            await this.writeCmdBinary(new Uint8Array(attachment.content));
+            await this.#connection.writeCmdBinary(new Uint8Array(attachment.content));
           } else {
-            await this.writeCmdBinary(attachment.content);
+            await this.#connection.writeCmdBinary(attachment.content);
           }
 
-          await this.writeCmd("\r\n");
+          await this.#connection.writeCmd("\r\n");
         } else if (attachment.encoding === "text") {
-          await this.writeCmd("Content-Transfer-Encoding: quoted-printable");
+          await this.#connection.writeCmd("Content-Transfer-Encoding: quoted-printable");
 
-          await this.writeCmd(attachment.content, "\r\n");
+          await this.#connection.writeCmd(attachment.content, "\r\n");
         }
       }
 
-      await this.writeCmd("--attachment--\r\n");
+      await this.#connection.writeCmd("--attachment--\r\n");
 
-      await this.writeCmd(".\r\n");
+      await this.#connection.writeCmd(".\r\n");
 
-      this.assertCode(await this.readCmd(), CommandCode.OK);
+      this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
     } catch (ex) {
       this.#queNextSending();
       throw ex;
@@ -237,30 +212,13 @@ export class SmtpClient {
     this.#queNextSending();
   }
 
-  #supportedFeatures = new Set<string>()
-  #_reader?: BufReader
+  async prepareConnection() {
+    this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.READY);
 
-  async #cleanup() {
-    this.writeCmd('NOOP')
-
-    while (true) {
-      const cmd = await this.readCmd()
-      if(cmd && cmd.code === 250) return
-    }
-  }
-
-  async #connect(conn: Deno.Conn) {
-    this.#conn = conn;
-    this.#_reader = new BufReader(this.#conn);
-    this.#writer = new BufWriter(this.#conn);
-    this.#reader = new TextProtoReader(this.#_reader);
-
-    this.assertCode(await this.readCmd(), CommandCode.READY);
-
-    await this.writeCmd("EHLO", this.config.connection.hostname);
+    await this.#connection.writeCmd("EHLO", this.config.connection.hostname);
 
     while (true) {
-      const cmd = await this.readCmd();
+      const cmd = await this.#connection.readCmd();
 
       if(!cmd) break
 
@@ -273,102 +231,51 @@ export class SmtpClient {
     }
 
     if (this.#supportedFeatures.has('STARTTLS')) {
-      await this.writeCmd("STARTTLS");
-      this.assertCode(await this.readCmd(), CommandCode.READY);
+      await this.#connection.writeCmd("STARTTLS");
+      this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.READY);
 
-      this.#conn = await Deno.startTls(this.#conn, {
+      const conn = await Deno.startTls(this.#connection.conn!, {
         hostname: this.config.connection.hostname,
       });
+      this.#connection.setupConnection(conn)
+      this.#connection.secure = true
 
-      this.#secure = true;
-
-      this.#_reader = new BufReader(this.#conn);
-      this.#writer = new BufWriter(this.#conn);
-      this.#reader = new TextProtoReader(this.#_reader);
-
-      await this.writeCmd("EHLO", this.config.connection.hostname);
+      await this.#connection.writeCmd("EHLO", this.config.connection.hostname);
 
       while (true) {
-        const cmd = await this.readCmd();
+        const cmd = await this.#connection.readCmd();
         if (!cmd || !cmd.args.startsWith("-")) break;
       }
     }
 
-    if (!this.config.debug.allowUnsecure && !this.#secure) {
+    if (!this.config.debug.allowUnsecure && !this.#connection.secure) {
       throw new Error(
         "Connection is not secure! Don't send authentication over non secure connection!",
       );
     }
 
     if (this.config.connection.auth) {
-      await this.writeCmd("AUTH", "LOGIN");
-      this.assertCode(await this.readCmd(), 334);
+      await this.#connection.writeCmd("AUTH", "LOGIN");
+      this.#connection.assertCode(await this.#connection.readCmd(), 334);
 
-      await this.writeCmd(btoa(this.config.connection.auth.username));
-      this.assertCode(await this.readCmd(), 334);
+      await this.#connection.writeCmd(btoa(this.config.connection.auth.username));
+      this.#connection.assertCode(await this.#connection.readCmd(), 334);
 
-      await this.writeCmd(btoa(this.config.connection.auth.password));
-      this.assertCode(await this.readCmd(), CommandCode.AUTHO_SUCCESS);
+      await this.#connection.writeCmd(btoa(this.config.connection.auth.password));
+      this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.AUTHO_SUCCESS);
     }
 
     await this.#cleanup()
   }
 
-  private assertCode(cmd: Command | null, code: number, msg?: string) {
-    if (!cmd) {
-      throw new Error(`invalid cmd`);
-    }
-    if (cmd.code !== code) {
-      throw new Error(msg || cmd.code + ": " + cmd.args);
+  #supportedFeatures = new Set<string>()
+
+  async #cleanup() {
+    this.#connection.writeCmd('NOOP')
+
+    while (true) {
+      const cmd = await this.#connection.readCmd()
+      if(cmd && cmd.code === 250) return
     }
   }
-
-  private async readCmd(): Promise<Command | null> {
-    if (!this.#reader) {
-      return null;
-    }
-    const result = await this.#reader.readLine();
-
-    if (this.config.debug.log) {
-      console.log(result);
-    }
-
-    if (result === null) return null;
-    const cmdCode = parseInt(result.slice(0, 3).trim());
-    const cmdArgs = result.slice(3).trim();
-    return {
-      code: cmdCode,
-      args: cmdArgs,
-    };
-  }
-
-  private async writeCmd(...args: string[]) {
-    if (!this.#writer) {
-      return null;
-    }
-
-    if (this.config.debug.log) {
-      console.table(args);
-    }
-
-    const data = encoder.encode([...args].join(" ") + "\r\n");
-    await this.#writer.write(data);
-    await this.#writer.flush();
-  }
-
-  private async writeCmdBinary(...args: Uint8Array[]) {
-    if (!this.#writer) {
-      return null;
-    }
-
-    if (this.config.debug.log) {
-      console.table(args.map(() => "Uint8Attay"));
-    }
-
-    for (let i = 0; i < args.length; i++) {
-      await this.#writer.write(args[i]);
-    }
-    await this.#writer.flush();
-  }
-
 }
