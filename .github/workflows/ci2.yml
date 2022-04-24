@@ -10,8 +10,4 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Install Deno
-        uses: denolib/setup-deno@master
-        with:
-          deno-version: 1.21.1
       - run: docker info
