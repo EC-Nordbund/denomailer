@@ -2,10 +2,10 @@
 /// <reference lib="deno.worker" />
 /// <reference lib="deno.unstable" />
 
-import { SmtpClient } from "./smtp.ts";
+import { SMTPClient } from "./smtp.ts";
 import { ResolvedSendConfig } from "../config/mail/mod.ts";
 
-let client: SmtpClient
+let client: SMTPClient
 
 let cb: () => void;
 const readyPromise = new Promise<void>((res) => {
@@ -27,7 +27,7 @@ async function send(config: ResolvedSendConfig) {
 
 addEventListener("message", async (ev: MessageEvent) => {
   if (ev.data.__setup) {
-    client = new SmtpClient(ev.data.__setup);
+    client = new SMTPClient(ev.data.__setup);
     cb();
     return;
   }

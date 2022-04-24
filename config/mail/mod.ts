@@ -1,6 +1,7 @@
 import { Attachment, ResolvedAttachment, resolveAttachment } from "./attachments.ts";
 import { Content, resolveContent } from "./content.ts";
 import { mailList, saveMailObject, parseSingleEmail, parseMailList, validateEmailList, isSingleMail } from "./email.ts";
+import { ResolvedClientOptions } from "../client/mod.ts";
 
 export interface SendConfig {
   to: mailList;
@@ -77,7 +78,7 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
   }
 }
 
-export function validateConfig(config: ResolvedSendConfig, warning: 'ignore' | 'error' | 'log' = 'log'): void {
+export function validateConfig(config: ResolvedSendConfig, client: ResolvedClientOptions): ResolvedSendConfig {
   const errors: string[] = []
   const warn: string[] = []
 
@@ -131,13 +132,15 @@ export function validateConfig(config: ResolvedSendConfig, warning: 'ignore' | '
     warn.push('You shoukd provide at least html or text content!')
   }
 
-  if(warning === 'log' && warn.length > 0) console.warn(warn.join('\n'))
+  if(client.client.warning === 'log' && warn.length > 0) console.warn(warn.join('\n'))
   
-  if(warning === 'error') {
+  if(client.client.warning === 'error') {
     errors.push(...warn)
   }
 
   if(errors.length > 0) {
     throw new Error(errors.join('\n'))
   }
+
+  return config
 }

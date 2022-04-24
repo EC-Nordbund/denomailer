@@ -1,3 +1,5 @@
+import { ResolvedSendConfig } from "../mail/mod.ts";
+
 export interface ResolvedClientOptions {
   debug: {
     log: boolean
@@ -19,9 +21,13 @@ export interface ResolvedClientOptions {
   }
   client: {
     warning: 'ignore' | 'log' | 'error'
+    preprocessors: Preprocessor[]
   }
 }
 
+/**
+ * TODO
+ */
 export interface ClientOptions {
   debug?: {
     /**
@@ -78,9 +84,20 @@ export interface ClientOptions {
     timeout?: number 
   } | boolean
   client?: {
-    warning?: 'ignore' | 'log' | 'error'
+    /**
+     * There are some cases where warnings are created. These are loged by default but you can 'ignore' them or all warnings should be considered 'error'.
+     * 
+     * @default log
+     */
+    warning?: 'ignore' | 'log' | 'error',
+    /**
+     * TODO
+     */
+    preprocessors?: Preprocessor[]
   }
 }
+
+type Preprocessor = (mail: ResolvedSendConfig, client: ResolvedClientOptions) => ResolvedSendConfig
 
 export function resolveClientOptions(config: ClientOptions): ResolvedClientOptions {
   return {
@@ -103,7 +120,8 @@ export function resolveClientOptions(config: ClientOptions): ResolvedClientOptio
       timeout: config.pool.timeout ?? 60000
     }) : undefined),
     client: {
-      warning: config.client?.warning ?? 'log'
+      warning: config.client?.warning ?? 'log',
+      preprocessors: config.client?.preprocessors ?? []
     }
   }
 }
