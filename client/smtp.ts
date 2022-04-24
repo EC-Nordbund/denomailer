@@ -1,5 +1,5 @@
 import type { ResolvedSendConfig } from "../config/mail/mod.ts";
-import { ResolvedClientOptions } from '../config/client/mod.ts'
+import { ResolvedClientOptions } from "../config/client/mod.ts";
 import { SMTPConnection } from "./connection.ts";
 
 const CommandCode = {
@@ -11,100 +11,136 @@ const CommandCode = {
 };
 
 class QUE {
-  running = false
-  #que: (() => void)[] = []
-  idle: Promise<void> = Promise.resolve()
-  #idbleCB?: () => void 
+  running = false;
+  #que: (() => void)[] = [];
+  idle: Promise<void> = Promise.resolve();
+  #idbleCB?: () => void;
 
   que(): Promise<void> {
-    if(!this.running) {
-      this.running = true
+    if (!this.running) {
+      this.running = true;
       this.idle = new Promise((res) => {
-        this.#idbleCB = res
-      })
-      return Promise.resolve()
+        this.#idbleCB = res;
+      });
+      return Promise.resolve();
     }
 
     return new Promise<void>((res) => {
-      this.#que.push(res)
-    })
+      this.#que.push(res);
+    });
   }
 
   next() {
-    if(this.#que.length === 0) {
-      this.running = false
-      if(this.#idbleCB) this.#idbleCB()
-      return
+    if (this.#que.length === 0) {
+      this.running = false;
+      if (this.#idbleCB) this.#idbleCB();
+      return;
     }
 
-    this.#que[0]()
-    this.#que.splice(0, 1)
+    this.#que[0]();
+    this.#que.splice(0, 1);
   }
 }
 
 export class SMTPClient {
-  #connection: SMTPConnection
-  #que = new QUE()
+  #connection: SMTPConnection;
+  #que = new QUE();
 
   constructor(private config: ResolvedClientOptions) {
-    const c = new SMTPConnection(config)
-    this.#connection = c
+    const c = new SMTPConnection(config);
+    this.#connection = c;
 
     this.#ready = (async () => {
-      await c.ready
-      await this.#prepareConnection()
-    })()
+      await c.ready;
+      await this.#prepareConnection();
+    })();
   }
 
-  #ready: Promise<void>
+  #ready: Promise<void>;
 
   close() {
-    return this.#connection.close()
+    return this.#connection.close();
   }
 
   get isSending() {
-    return this.#que.running
+    return this.#que.running;
   }
 
   get idle() {
-    return this.#que.idle
+    return this.#que.idle;
   }
 
   async send(config: ResolvedSendConfig) {
-    await this.#ready
+    await this.#ready;
     try {
-      await this.#que.que()
+      await this.#que.que();
 
       await this.#connection.writeCmd("MAIL", "FROM:", `<${config.from.mail}>`);
-      this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
+      this.#connection.assertCode(
+        await this.#connection.readCmd(),
+        CommandCode.OK,
+      );
 
       for (let i = 0; i < config.to.length; i++) {
-        await this.#connection.writeCmd("RCPT", "TO:", `<${config.to[i].mail}>`);
-        this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
+        await this.#connection.writeCmd(
+          "RCPT",
+          "TO:",
+          `<${config.to[i].mail}>`,
+        );
+        this.#connection.assertCode(
+          await this.#connection.readCmd(),
+          CommandCode.OK,
+        );
       }
 
       for (let i = 0; i < config.cc.length; i++) {
-        await this.#connection.writeCmd("RCPT", "TO:", `<${config.cc[i].mail}>`);
-        this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
+        await this.#connection.writeCmd(
+          "RCPT",
+          "TO:",
+          `<${config.cc[i].mail}>`,
+        );
+        this.#connection.assertCode(
+          await this.#connection.readCmd(),
+          CommandCode.OK,
+        );
       }
 
       for (let i = 0; i < config.bcc.length; i++) {
-        await this.#connection.writeCmd("RCPT", "TO:", `<${config.bcc[i].mail}>`);
-        this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
+        await this.#connection.writeCmd(
+          "RCPT",
+          "TO:",
+          `<${config.bcc[i].mail}>`,
+        );
+        this.#connection.assertCode(
+          await this.#connection.readCmd(),
+          CommandCode.OK,
+        );
       }
 
       await this.#connection.writeCmd("DATA");
-      this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.BEGIN_DATA);
+      this.#connection.assertCode(
+        await this.#connection.readCmd(),
+        CommandCode.BEGIN_DATA,
+      );
 
       await this.#connection.writeCmd("Subject: ", config.subject);
-      await this.#connection.writeCmd("From: ", `${config.from.name} <${config.from.mail}>`);
-      if(config.to.length > 0){
-        await this.#connection.writeCmd("To: ", config.to.map((m) => `${m.name} <${m.mail}>`).join(";"));
+      await this.#connection.writeCmd(
+        "From: ",
+        `${config.from.name} <${config.from.mail}>`,
+      );
+      if (config.to.length > 0) {
+        await this.#connection.writeCmd(
+          "To: ",
+          config.to.map((m) => `${m.name} <${m.mail}>`).join(";"),
+        );
       }
-      if(config.cc.length > 0){
-        await this.#connection.writeCmd("Cc: ", config.cc.map((m) => `${m.name} <${m.mail}>`).join(";"));
+      if (config.cc.length > 0) {
+        await this.#connection.writeCmd(
+          "Cc: ",
+          config.cc.map((m) => `${m.name} <${m.mail}>`).join(";"),
+        );
       }
-      
+
       await this.#connection.writeCmd("Date: ", config.date);
 
       if (config.inReplyTo) {
@@ -116,7 +152,10 @@ export class SMTPClient {
       }
 
       if (config.replyTo) {
-        await this.#connection.writeCmd("ReplyTo: ", `${config.replyTo.name} <${config.replyTo.name}>`);
+        await this.#connection.writeCmd(
+          "ReplyTo: ",
+          `${config.replyTo.name} <${config.replyTo.name}>`,
+        );
       }
 
       if (config.priority) {
@@ -179,14 +218,18 @@ export class SMTPClient {
             attachment.content instanceof ArrayBuffer ||
             attachment.content instanceof SharedArrayBuffer
           ) {
-            await this.#connection.writeCmdBinary(new Uint8Array(attachment.content));
+            await this.#connection.writeCmdBinary(
+              new Uint8Array(attachment.content),
+            );
           } else {
             await this.#connection.writeCmdBinary(attachment.content);
           }
 
           await this.#connection.writeCmd("\r\n");
         } else if (attachment.encoding === "text") {
-          await this.#connection.writeCmd("Content-Transfer-Encoding: quoted-printable");
+          await this.#connection.writeCmd(
+            "Content-Transfer-Encoding: quoted-printable",
+          );
 
           await this.#connection.writeCmd(attachment.content, "\r\n");
         }
@@ -196,42 +239,51 @@ export class SMTPClient {
 
       await this.#connection.writeCmd(".\r\n");
 
-      this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.OK);
-      await this.#cleanup()
+      this.#connection.assertCode(
+        await this.#connection.readCmd(),
+        CommandCode.OK,
+      );
+      await this.#cleanup();
       this.#que.next();
     } catch (ex) {
-      await this.#cleanup()
+      await this.#cleanup();
       this.#que.next();
       throw ex;
     }
   }
 
   async #prepareConnection() {
-    this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.READY);
+    this.#connection.assertCode(
+      await this.#connection.readCmd(),
+      CommandCode.READY,
+    );
 
     await this.#connection.writeCmd("EHLO", this.config.connection.hostname);
 
     const cmd = await this.#connection.readCmd();
-    
-    if(!cmd) throw new Error("Unexpected empty response");
-    
-    if(typeof cmd.args === 'string') {
-      this.#supportedFeatures.add(cmd.args)
+
+    if (!cmd) throw new Error("Unexpected empty response");
+
+    if (typeof cmd.args === "string") {
+      this.#supportedFeatures.add(cmd.args);
     } else {
-      cmd.args.forEach(cmd => {
-        this.#supportedFeatures.add(cmd)
-      })
+      cmd.args.forEach((cmd) => {
+        this.#supportedFeatures.add(cmd);
+      });
     }
 
-    if (this.#supportedFeatures.has('STARTTLS')) {
+    if (this.#supportedFeatures.has("STARTTLS")) {
       await this.#connection.writeCmd("STARTTLS");
-      this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.READY);
+      this.#connection.assertCode(
+        await this.#connection.readCmd(),
+        CommandCode.READY,
+      );
 
       const conn = await Deno.startTls(this.#connection.conn!, {
         hostname: this.config.connection.hostname,
       });
-      this.#connection.setupConnection(conn)
-      this.#connection.secure = true
+      this.#connection.setupConnection(conn);
+      this.#connection.secure = true;
 
       await this.#connection.writeCmd("EHLO", this.config.connection.hostname);
 
@@ -248,24 +300,31 @@ export class SMTPClient {
       await this.#connection.writeCmd("AUTH", "LOGIN");
       this.#connection.assertCode(await this.#connection.readCmd(), 334);
 
-      await this.#connection.writeCmd(btoa(this.config.connection.auth.username));
+      await this.#connection.writeCmd(
+        btoa(this.config.connection.auth.username),
+      );
       this.#connection.assertCode(await this.#connection.readCmd(), 334);
 
-      await this.#connection.writeCmd(btoa(this.config.connection.auth.password));
-      this.#connection.assertCode(await this.#connection.readCmd(), CommandCode.AUTHO_SUCCESS);
+      await this.#connection.writeCmd(
+        btoa(this.config.connection.auth.password),
+      );
+      this.#connection.assertCode(
+        await this.#connection.readCmd(),
+        CommandCode.AUTHO_SUCCESS,
+      );
     }
 
-    await this.#cleanup()
+    await this.#cleanup();
   }
 
-  #supportedFeatures = new Set<string>()
+  #supportedFeatures = new Set<string>();
 
   async #cleanup() {
-    this.#connection.writeCmd('NOOP')
+    this.#connection.writeCmd("NOOP");
 
     while (true) {
-      const cmd = await this.#connection.readCmd()
-      if(cmd && cmd.code === 250) return
+      const cmd = await this.#connection.readCmd();
+      if (cmd && cmd.code === 250) return;
     }
   }
 }

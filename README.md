@@ -131,18 +131,28 @@ await client.close();
 ```
 
 ### Filter E-Mails
-If you want a custom E-Mail validator and filter some E-Mails (because they are burner mails or the domain is on a blacklist or only allow specific domains etc.) you can add the `mailFilter` option to the smtp-client constructor options. `mailFilter` takes a function that gets 3 Arguments the "mailbox" (all that is before @ in the mail), the "domain" (what is after the @) and `internalTag` that is a new option that can be set in the mailConfig so you can set a type for that mail for example type `newsletter` etc. `internalTag` can be a `string` or a `symbol`.
 
-The filter function returns a boolean or a Promise that resolves to a boolean. There are 3 things you can do when this function is called:
+If you want a custom E-Mail validator and filter some E-Mails (because they are
+burner mails or the domain is on a blacklist or only allow specific domains
+etc.) you can add the `mailFilter` option to the smtp-client constructor
+options. `mailFilter` takes a function that gets 3 Arguments the "mailbox" (all
+that is before @ in the mail), the "domain" (what is after the @) and
+`internalTag` that is a new option that can be set in the mailConfig so you can
+set a type for that mail for example type `newsletter` etc. `internalTag` can be
+a `string` or a `symbol`.
+
+The filter function returns a boolean or a Promise that resolves to a boolean.
+There are 3 things you can do when this function is called:
 
 1. return `true` the E-Mail is keept in the list
 2. return `false` the E-Mail is removed from the list
 3. throw an Error the E-Mail is aborted and never send
 
-So you can decide if a single mail error results in a complete mail abort or it only get removed from the list.
+So you can decide if a single mail error results in a complete mail abort or it
+only get removed from the list.
 
-You can for example validate against this list: https://github.com/wesbos/burner-email-providers.
-
+You can for example validate against this list:
+https://github.com/wesbos/burner-email-providers.
 
 ### Configuring your client
 
@@ -159,26 +169,42 @@ const client = new SmtpClient({
 ```
 
 ## Pool, Worker
+
 > This is unstable API may change! This requires deno to run in unstable mode.
 
-Adds 2 new classes `SMTPWorker` and `SMTPWorkerPool` (for constructor options see code for now). This creates a SMTP client (or multiple) that get automaticly killed if the connection is not used for around 60s.
+Adds 2 new classes `SMTPWorker` and `SMTPWorkerPool` (for constructor options
+see code for now). This creates a SMTP client (or multiple) that get automaticly
+killed if the connection is not used for around 60s.
 
 ## TLS issues
+
 When getting TLS errors make shure:
+
 1. you use the correct port (mostly 25, 587, 465)
 2. the server supports STARTTLS when using `client.connect`
 3. the server supports TLS when using `client.connectTLS`
-4. Use the command `openssl s_client -debug -starttls smtp -crlf -connect your-host.de:587` or `openssl s_client -debug -crlf -connect your-host.de:587` and get the used cipher this should be a cipher with "forward secrecy". Check the status of the cipher on https://ciphersuite.info/cs/ . If the cipher is not STRONG this is an issue with your mail provider so you have to contact them to fix it.
-5. Feel free to create issues if you are ok with that share the port and host so a proper debug can be done.
-6. We can only support TLS where Deno supports it and Deno uses rustls wich explicitly not implemented some "weak" ciphers.
-
+4. Use the command
+   `openssl s_client -debug -starttls smtp -crlf -connect your-host.de:587` or
+   `openssl s_client -debug -crlf -connect your-host.de:587` and get the used
+   cipher this should be a cipher with "forward secrecy". Check the status of
+   the cipher on https://ciphersuite.info/cs/ . If the cipher is not STRONG this
+   is an issue with your mail provider so you have to contact them to fix it.
+5. Feel free to create issues if you are ok with that share the port and host so
+   a proper debug can be done.
+6. We can only support TLS where Deno supports it and Deno uses rustls wich
+   explicitly not implemented some "weak" ciphers.
 
 ### Non SpecCompliant SMTP-Server
-There are some SMTP-Server that don't follow the spec to 100%. This can result in unexpected errors in denomailer. If this happens (for example in https://github.com/EC-Nordbund/denomailer/blob/03a66a6f9a4b5f349ea35856f5903fb45fd0cc5f/smtp.ts#L376 the server sends a 250) please create an issue. We will try and do the following:
+
+There are some SMTP-Server that don't follow the spec to 100%. This can result
+in unexpected errors in denomailer. If this happens (for example in
+https://github.com/EC-Nordbund/denomailer/blob/03a66a6f9a4b5f349ea35856f5903fb45fd0cc5f/smtp.ts#L376
+the server sends a 250) please create an issue. We will try and do the
+following:
 
 1. Check if it is not an error in denomailer
-2. Try to fix it at the SMTP-Server side (create an issue if the server is an opensource project etc.)
-3. We will add a ***temporary*** workaround by changing denomailer. This will include log messages telling the developer (if the workaround is used) that denomailer used the workaround wich can be removed at any time.
-
-
-
+2. Try to fix it at the SMTP-Server side (create an issue if the server is an
+   opensource project etc.)
+3. We will add a _**temporary**_ workaround by changing denomailer. This will
+   include log messages telling the developer (if the workaround is used) that
+   denomailer used the workaround wich can be removed at any time.

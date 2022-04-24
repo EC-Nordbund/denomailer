@@ -1,5 +1,5 @@
 import { BufReader, BufWriter, TextProtoReader } from "../deps.ts";
-import { ResolvedClientOptions } from '../config/client/mod.ts'
+import { ResolvedClientOptions } from "../config/client/mod.ts";
 
 const encoder = new TextEncoder();
 
@@ -9,17 +9,17 @@ interface Command {
 }
 
 export class SMTPConnection {
-  secure = false
+  secure = false;
 
   conn: Deno.Conn | null = null;
   #reader: TextProtoReader | null = null;
   #writer: BufWriter | null = null;
 
   constructor(private config: ResolvedClientOptions) {
-    this.ready = this.#connect()
+    this.ready = this.#connect();
   }
 
-  ready: Promise<void>
+  ready: Promise<void>;
 
   async close() {
     if (!this.conn) {
@@ -29,7 +29,7 @@ export class SMTPConnection {
   }
 
   setupConnection(conn: Deno.Conn) {
-    this.conn = conn
+    this.conn = conn;
 
     const reader = new BufReader(this.conn);
     this.#writer = new BufWriter(this.conn);
@@ -37,20 +37,20 @@ export class SMTPConnection {
   }
 
   async #connect() {
-    if(this.config.connection.tls) {
+    if (this.config.connection.tls) {
       this.conn = await Deno.connectTls({
         hostname: this.config.connection.hostname,
-        port: this.config.connection.port
+        port: this.config.connection.port,
       });
       this.secure = true;
     } else {
       this.conn = await Deno.connect({
         hostname: this.config.connection.hostname,
-        port: this.config.connection.port
+        port: this.config.connection.port,
       });
     }
-    
-    await this.setupConnection(this.conn)
+
+    await this.setupConnection(this.conn);
   }
 
   public assertCode(cmd: Command | null, code: number, msg?: string) {
@@ -67,23 +67,28 @@ export class SMTPConnection {
       return null;
     }
 
-    const result: (string | null)[] = []
+    const result: (string | null)[] = [];
 
-    while (result.length === 0 || (result.at(-1) && result.at(-1)!.at(3) !== '-')) {
-      result.push(await this.#reader.readLine())
+    while (
+      result.length === 0 || (result.at(-1) && result.at(-1)!.at(3) !== "-")
+    ) {
+      result.push(await this.#reader.readLine());
     }
 
-    const nonNullResult: string[] = (result.at(-1)===null ? result.slice(0, result.length-1) : result) as any
+    const nonNullResult: string[] =
+      (result.at(-1) === null
+        ? result.slice(0, result.length - 1)
+        : result) as any;
 
-    if(nonNullResult.length === 0) return null
+    if (nonNullResult.length === 0) return null;
 
-    const code = parseInt(nonNullResult[0].slice(0,3))
-    const data = nonNullResult.map(v=>v.slice(4).trim())
+    const code = parseInt(nonNullResult[0].slice(0, 3));
+    const data = nonNullResult.map((v) => v.slice(4).trim());
 
     return {
       code,
-      args: data
-    }
+      args: data,
+    };
   }
 
   public async writeCmd(...args: string[]) {
@@ -114,5 +119,4 @@ export class SMTPConnection {
     }
     await this.#writer.flush();
   }
-
 }

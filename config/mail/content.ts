@@ -7,15 +7,15 @@ export interface Content {
 }
 
 export function resolveContent({
-    text,
-    html,
-    mimeContent
-  }: {
-    text?: string,
-    html?: string,
-    mimeContent?: Content[]
-  }): Content[] {
-  const newContent = [...mimeContent ?? []]
+  text,
+  html,
+  mimeContent,
+}: {
+  text?: string;
+  html?: string;
+  mimeContent?: Content[];
+}): Content[] {
+  const newContent = [...mimeContent ?? []];
 
   if (text === "auto" && html) {
     text = html
@@ -38,8 +38,7 @@ export function resolveContent({
       content: quotedPrintableEncode(html),
       transferEncoding: "quoted-printable",
     });
-  
   }
 
-  return newContent
+  return newContent;
 }

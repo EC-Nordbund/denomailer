@@ -1,6 +1,17 @@
-import { Attachment, ResolvedAttachment, resolveAttachment } from "./attachments.ts";
+import {
+  Attachment,
+  resolveAttachment,
+  ResolvedAttachment,
+} from "./attachments.ts";
 import { Content, resolveContent } from "./content.ts";
-import { mailList, saveMailObject, parseSingleEmail, parseMailList, validateEmailList, isSingleMail } from "./email.ts";
+import {
+  isSingleMail,
+  mailList,
+  parseMailList,
+  parseSingleEmail,
+  saveMailObject,
+  validateEmailList,
+} from "./email.ts";
 import { ResolvedClientOptions } from "../client/mod.ts";
 
 export interface SendConfig {
@@ -18,9 +29,8 @@ export interface SendConfig {
   references?: string;
   priority?: "high" | "normal" | "low";
   attachments?: Attachment[];
-  internalTag?: string | symbol
+  internalTag?: string | symbol;
 }
-
 
 export interface ResolvedSendConfig {
   to: saveMailObject[];
@@ -35,7 +45,7 @@ export interface ResolvedSendConfig {
   references?: string;
   priority?: "high" | "normal" | "low";
   attachments: ResolvedAttachment[];
-  internalTag?: string | symbol
+  internalTag?: string | symbol;
 }
 
 export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
@@ -54,8 +64,8 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     references,
     priority,
     attachments,
-    internalTag
-  } = config
+    internalTag,
+  } = config;
 
   return {
     to: parseMailList(to),
@@ -66,81 +76,92 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     mimeContent: resolveContent({
       mimeContent,
       html,
-      text: content
+      text: content,
     }),
     replyTo: replyTo ? parseSingleEmail(replyTo) : undefined,
     inReplyTo,
     subject,
-    attachments: attachments ? attachments.map(attachment => resolveAttachment(attachment)) : [],
+    attachments: attachments
+      ? attachments.map((attachment) => resolveAttachment(attachment))
+      : [],
     references,
     priority,
-    internalTag
-  }
+    internalTag,
+  };
 }
 
-export function validateConfig(config: ResolvedSendConfig, client: ResolvedClientOptions): ResolvedSendConfig {
-  const errors: string[] = []
-  const warn: string[] = []
+export function validateConfig(
+  config: ResolvedSendConfig,
+  client: ResolvedClientOptions,
+): ResolvedSendConfig {
+  const errors: string[] = [];
+  const warn: string[] = [];
 
-  if(!isSingleMail(config.from.mail)) {
-    errors.push(`The specified from adress is not a valid email adress.`)
+  if (!isSingleMail(config.from.mail)) {
+    errors.push(`The specified from adress is not a valid email adress.`);
   }
 
-  if(config.replyTo && !isSingleMail(config.replyTo.mail)) {
-    errors.push(`The specified replyTo adress is not a valid email adress.`)
+  if (config.replyTo && !isSingleMail(config.replyTo.mail)) {
+    errors.push(`The specified replyTo adress is not a valid email adress.`);
   }
 
-  const valTo = validateEmailList(config.to)
+  const valTo = validateEmailList(config.to);
 
-  if(valTo.bad.length > 0) {
-    config.to = valTo.ok
+  if (valTo.bad.length > 0) {
+    config.to = valTo.ok;
 
-    valTo.bad.forEach(m => {
-      warn.push(`TO Email ${m.mail} is not valid!`)
-    })
+    valTo.bad.forEach((m) => {
+      warn.push(`TO Email ${m.mail} is not valid!`);
+    });
   }
 
-  const valCc = validateEmailList(config.cc)
+  const valCc = validateEmailList(config.cc);
 
-  if(valCc.bad.length > 0) {
-    config.to = valCc.ok
+  if (valCc.bad.length > 0) {
+    config.to = valCc.ok;
 
-    valCc.bad.forEach(m => {
-      warn.push(`CC Email ${m.mail} is not valid!`)
-    })
+    valCc.bad.forEach((m) => {
+      warn.push(`CC Email ${m.mail} is not valid!`);
+    });
   }
 
-  const valBcc = validateEmailList(config.bcc)
+  const valBcc = validateEmailList(config.bcc);
 
-  if(valBcc.bad.length > 0) {
-    config.to = valBcc.ok
+  if (valBcc.bad.length > 0) {
+    config.to = valBcc.ok;
 
-    valBcc.bad.forEach(m => {
-      warn.push(`BCC Email ${m.mail} is not valid!`)
-    })
+    valBcc.bad.forEach((m) => {
+      warn.push(`BCC Email ${m.mail} is not valid!`);
+    });
   }
 
-  if(config.to.length + config.cc.length + config.bcc.length === 0) {
-    errors.push(`No valid emails provided!`)
+  if (config.to.length + config.cc.length + config.bcc.length === 0) {
+    errors.push(`No valid emails provided!`);
   }
 
-  if(config.mimeContent.length === 0) {
-    errors.push(`No content provided!`)
+  if (config.mimeContent.length === 0) {
+    errors.push(`No content provided!`);
   }
 
-  if(!config.mimeContent.some(v=>v.mimeType.trim() === 'text/html' || v.mimeType.trim() === 'text/plain')) {
-    warn.push('You shoukd provide at least html or text content!')
+  if (
+    !config.mimeContent.some((v) =>
+      v.mimeType.trim() === "text/html" || v.mimeType.trim() === "text/plain"
+    )
+  ) {
+    warn.push("You shoukd provide at least html or text content!");
   }
 
-  if(client.client.warning === 'log' && warn.length > 0) console.warn(warn.join('\n'))
-  
-  if(client.client.warning === 'error') {
-    errors.push(...warn)
+  if (client.client.warning === "log" && warn.length > 0) {
+    console.warn(warn.join("\n"));
   }
 
-  if(errors.length > 0) {
-    throw new Error(errors.join('\n'))
+  if (client.client.warning === "error") {
+    errors.push(...warn);
   }
 
-  return config
+  if (errors.length > 0) {
+    throw new Error(errors.join("\n"));
+  }
+
+  return config;
 }

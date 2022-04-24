@@ -6,68 +6,76 @@ export interface saveMailObject {
   mail: string;
   name: string;
 }
-type singleMail = string | mailObject
+type singleMail = string | mailObject;
 type mailListObject = Omit<Record<string, string>, "name" | "mail">;
-export type mailList = mailListObject | singleMail | singleMail[] | mailObject[]
+export type mailList =
+  | mailListObject
+  | singleMail
+  | singleMail[]
+  | mailObject[];
 
 export function isSingleMail(mail: string) {
   return /^(([^<>()\[\]\\,;:\s@"]+@[a-zA-Z0-9\-]+\.([a-zA-Z0-9\-]+\.)*[a-zA-Z]{2,})|(<[^<>()\[\]\\,;:\s@"]+@[a-zA-Z0-9]+\.([a-zA-Z0-9\-]+\.)*[a-zA-Z]{2,}>)|([^<>]+ <[^<>()\[\]\\,;:\s@"]+@[a-zA-Z0-9]+\.([a-zA-Z0-9\-]+\.)*[a-zA-Z]{2,}>))$/
     .test(mail);
 }
 
-
 export function parseSingleEmail(mail: singleMail): saveMailObject {
-  if(typeof mail !== 'string') {
+  if (typeof mail !== "string") {
     return {
       mail: mail.mail,
-      name: mail.name ?? ''
-    }
-  } 
-
-  const mailSplitRe = /^([^<]*)<([^>]+)>\s*$/
-
-  const res = mailSplitRe.exec(mail)
-
-  if(!res) {
-    return {
-      mail,
-      name: ''
-    }
+      name: mail.name ?? "",
+    };
   }
 
-  const [_, name, email] = res
+  const mailSplitRe = /^([^<]*)<([^>]+)>\s*$/;
+
+  const res = mailSplitRe.exec(mail);
+
+  if (!res) {
+    return {
+      mail,
+      name: "",
+    };
+  }
+
+  const [_, name, email] = res;
 
   return {
     name: name.trim(),
-    mail: email.trim()
-  }
+    mail: email.trim(),
+  };
 }
 
 export function parseMailList(list: mailList): saveMailObject[] {
-  if(typeof list === 'string') return [parseSingleEmail(list)]
-  if(Array.isArray(list)) return list.map(v=>parseSingleEmail(v))
+  if (typeof list === "string") return [parseSingleEmail(list)];
+  if (Array.isArray(list)) return list.map((v) => parseSingleEmail(v));
 
-  if('mail' in list) {
+  if ("mail" in list) {
     return [{
       mail: list.mail,
-      name: list.name ?? ''
-    }]
+      name: list.name ?? "",
+    }];
   }
 
-  return Object.entries((list as mailListObject)).map(([name, mail]) => ({name, mail}))
+  return Object.entries(list as mailListObject).map(([name, mail]) => ({
+    name,
+    mail,
+  }));
 }
 
-export function validateEmailList(list: saveMailObject[]): {ok: saveMailObject[], bad: saveMailObject[]} {
-  const ok: saveMailObject[] = []
-  const bad: saveMailObject[] = []
+export function validateEmailList(
+  list: saveMailObject[],
+): { ok: saveMailObject[]; bad: saveMailObject[] } {
+  const ok: saveMailObject[] = [];
+  const bad: saveMailObject[] = [];
 
   list.forEach((mail) => {
-    if(isSingleMail(mail.mail)) {
-      ok.push(mail)
+    if (isSingleMail(mail.mail)) {
+      ok.push(mail);
     } else {
-      bad.push(mail)
+      bad.push(mail);
     }
-  })
+  });
 
-  return {ok, bad}
+  return { ok, bad };
 }

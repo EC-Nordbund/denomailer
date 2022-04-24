@@ -5,7 +5,7 @@
 import { SMTPClient } from "./smtp.ts";
 import { ResolvedSendConfig } from "../config/mail/mod.ts";
 
-let client: SMTPClient
+let client: SMTPClient;
 
 let cb: () => void;
 const readyPromise = new Promise<void>((res) => {
@@ -36,19 +36,19 @@ addEventListener("message", async (ev: MessageEvent) => {
     return;
   }
 
-  if(ev.data.__mail) {
+  if (ev.data.__mail) {
     await readyPromise;
     try {
-      const data = await send(ev.data.mail)
+      const data = await send(ev.data.mail);
       postMessage({
         __ret: ev.data.__mail,
-        res: data
-      })
+        res: data,
+      });
     } catch (ex) {
       postMessage({
         __ret: ev.data.__mail,
-        err: ex
-      })
+        err: ex,
+      });
     }
   }
 });

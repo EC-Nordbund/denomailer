@@ -3,7 +3,7 @@ export { base64Decode } from "../../deps.ts";
 const encoder = new TextEncoder();
 
 export function quotedPrintableEncode(data: string, encLB = false) {
-  data.replaceAll('=', '=3D')
+  data.replaceAll("=", "=3D");
 
   if (!encLB) {
     data = data.replaceAll(" \r\n", "=20\r\n").replaceAll(" \n", "=20\n");
@@ -23,8 +23,8 @@ export function quotedPrintableEncode(data: string, encLB = false) {
 
     let enc = "";
     encodedChar.forEach((i) => {
-      let c = i.toString(16)
-      if(c.length === 1) c = '0' + c
+      let c = i.toString(16);
+      if (c.length === 1) c = "0" + c;
       enc += `=${c}`;
     });
 
@@ -34,19 +34,19 @@ export function quotedPrintableEncode(data: string, encLB = false) {
   let ret = "";
   const lines = Math.ceil(encodedData.length / 74) - 1;
 
-  let offset = 0
+  let offset = 0;
   for (let i = 0; i < lines; i++) {
     let old = encodedData.slice(i * 74 + offset, (i + 1) * 74);
-    offset = 0
+    offset = 0;
 
-    if(old.at(-1) === '=') {
-      old = old.slice(0, old.length - 1)
-      offset = -1
+    if (old.at(-1) === "=") {
+      old = old.slice(0, old.length - 1);
+      offset = -1;
     }
 
-    if(old.at(-2) === '=') {
-      old = old.slice(0, old.length - 2)
-      offset = -2
+    if (old.at(-2) === "=") {
+      old = old.slice(0, old.length - 2);
+      offset = -2;
     }
 
     if (old.endsWith("\r") || old.endsWith("\n")) {
