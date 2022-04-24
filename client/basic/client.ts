@@ -272,7 +272,9 @@ export class SMTPClient {
       });
     }
 
-    if (this.#supportedFeatures.has("STARTTLS") && !this.config.debug.noStartTLS) {
+    if (
+      this.#supportedFeatures.has("STARTTLS") && !this.config.debug.noStartTLS
+    ) {
       await this.#connection.writeCmd("STARTTLS");
       this.#connection.assertCode(
         await this.#connection.readCmd(),

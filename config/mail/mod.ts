@@ -151,8 +151,10 @@ export function validateConfig(
   }
 
   if (
-    !config.mimeContent.some((v) =>
-      (v.mimeType.includes("text/html") || (v.mimeType.includes("text/plain")))
+    !config.mimeContent.some((
+      v,
+    ) => (v.mimeType.includes("text/html") ||
+      (v.mimeType.includes("text/plain")))
     )
   ) {
     warn.push("You should provide at least html or text content!");

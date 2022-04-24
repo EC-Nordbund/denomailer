@@ -51,7 +51,7 @@ export interface ClientOptions {
     /**
      * Disable starttls
      */
-    noStartTLS?: boolean
+    noStartTLS?: boolean;
   };
   connection: {
     hostname: string;
@@ -122,7 +122,7 @@ export function resolveClientOptions(
       log: config.debug?.log ?? false,
       allowUnsecure: config.debug?.allowUnsecure ?? false,
       encodeLB: config.debug?.encodeLB ?? false,
-      noStartTLS: config.debug?.noStartTLS ?? false
+      noStartTLS: config.debug?.noStartTLS ?? false,
     },
     connection: {
       hostname: config.connection.hostname,

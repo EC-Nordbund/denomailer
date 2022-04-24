@@ -84,8 +84,8 @@ export class SMTPConnection {
     const code = parseInt(nonNullResult[0].slice(0, 3));
     const data = nonNullResult.map((v) => v.slice(4).trim());
 
-    if(this.config.debug.log) {
-      nonNullResult.forEach((v) => console.log(v))
+    if (this.config.debug.log) {
+      nonNullResult.forEach((v) => console.log(v));
     }
 
     return {
