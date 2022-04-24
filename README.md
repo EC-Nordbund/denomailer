@@ -3,6 +3,35 @@
 > This was forked from https://github.com/manyuanrong/deno-smtp but now is much
 > more advanced!
 
+## Quickstart with a simple example
+```ts
+// please use this line and change the version to the latest version!
+// import { SMTPClient } from 'https://deno.land/x/denomailer@x.x.x/mod.ts'
+import { SMTPClient } from 'https://deno.land/x/denomailer/mod.ts'
+
+const client = new SMTPClient({
+  connection: {
+    hostname: 'smtp.example.com',
+    port: 465,
+    tls: true,
+    auth: {
+      username: 'example',
+      password: 'password'
+    }
+  }
+})
+
+await client.send({
+  from: 'me@example.com',
+  to: 'you@example.com',
+  subject: 'example',
+  content: '...',
+  html: '<p>...</p>'
+})
+
+await client.close()
+```
+
 ## Client
 
 ### Options
@@ -32,20 +61,30 @@ for example:
 For the fields
 
 1. `from`, `replyTo` we only allow a single mail.
-2. `to`, `cc`, `bcc` we allow a MailObject a Array of single Mails or a single
+2. `to`, `cc`, `bcc` we allow a MailObject a Array of single Mails (you can mix formats) or a single
    Mail.
 
 ### Examples
 
 ## Other exports
 
+We export our implementation of an quotedPrintable encoder. There might be some use cases where you need it. The api of the function is considered stable!
 ## Stable api
 
 All api exported by `/mod.ts` is considered stable. But as the `pool` need the
 `--unstable` flag by Deno this has to be considered unstable. But we don't
-expect any breaking changes there.
+expect any breaking changes there - but if deno changes sytax etc. a new deno release can break it!
 
 Changes to them will only be made if a new major is released.
+
+## Contribute
+Feel free to contribute by:
+1. creating issues for bugs and feature requests (note that you have to use the bug template to get support)
+2. contribute code but keep in mind
+   *  for small changes you can just create a PR
+   *  for bigger changes please create an issue before! This will help to reduce time creating PR that are not merged.
+   *  if you fix a bug please add a test that fails before your fix
+3. contribute tests, fix typos, ...
 
 ## TLS issues
 
