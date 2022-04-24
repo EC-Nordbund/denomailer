@@ -26,7 +26,7 @@ export interface ResolvedClientOptions {
 }
 
 /**
- * TODO
+ * Options to create a new SMTP CLient
  */
 export interface ClientOptions {
   debug?: {
@@ -70,6 +70,9 @@ export interface ClientOptions {
      */
     tls?: boolean;
   };
+  /**
+   * Create multiple connections so you can send emails faster!
+   */
   pool?: {
     /**
      * Number of Workers
@@ -91,7 +94,11 @@ export interface ClientOptions {
      */
     warning?: "ignore" | "log" | "error";
     /**
-     * TODO
+     * List of preproccessors to
+     *
+     * - Filter mail
+     * - BCC all mails to someone
+     * - ...
      */
     preprocessors?: Preprocessor[];
   };

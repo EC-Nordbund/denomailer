@@ -4,7 +4,7 @@ const encoder = new TextEncoder();
 
 /**
  * Encodes a string as quotedPrintable
- * 
+ *
  * @param data string that needs encoding
  * @param encLB EXPERIMENTAL setting this to `true` will encode \r and \n. This might leed to problems
  * @returns encoded string

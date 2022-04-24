@@ -13,15 +13,19 @@ import {
 } from "../config/mail/mod.ts";
 
 /**
- * TODO
+ * SMTP-Client with support for pool, etc.
+ * TODO: example
  */
 export class SMTPHandler {
   #internalClient: SMTPWorker | SMTPWorkerPool | SMTPClient;
   #clientConfig: ResolvedClientOptions;
 
   /**
-   * TODO
-   * @param config
+   * create a new SMTPClient
+   *
+   * TODO: example
+   *
+   * @param config client config
    */
   constructor(config: ClientOptions) {
     const resolvedConfig = resolveClientOptions(config);
@@ -53,9 +57,10 @@ export class SMTPHandler {
   }
 
   /**
-   * TODO
-   * @param config
-   * @returns
+   * Sends a E-Mail with the correspondig config.
+   * TODO: examples
+   * @param config Email config
+   * @returns nothing (for now as this might change in the future!)
    */
   send(config: SendConfig): Promise<void> {
     let resolvedConfig = resolveSendConfig(config);
@@ -70,8 +75,7 @@ export class SMTPHandler {
   }
 
   /**
-   * TODO
-   * @returns
+   * Closes the connection (kills all Worker / closes connection)
    */
   close(): void | Promise<void> {
     return this.#internalClient.close();

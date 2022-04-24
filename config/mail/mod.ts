@@ -14,6 +14,9 @@ import {
 } from "./email.ts";
 import { ResolvedClientOptions } from "../client.ts";
 
+/**
+ * Config for a mail
+ */
 export interface SendConfig {
   to: mailList;
   cc?: mailList;
@@ -29,6 +32,10 @@ export interface SendConfig {
   references?: string;
   priority?: "high" | "normal" | "low";
   attachments?: Attachment[];
+  /**
+   * type of mail for example `registration` or `newsletter` etc.
+   * allowes preprocessors to hande different email types
+   */
   internalTag?: string | symbol;
 }
 
