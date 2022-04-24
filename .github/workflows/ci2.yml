@@ -10,4 +10,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - run: docker info
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      - run: docker run -d reachfive/fake-smtp-server
+      - run: deno run ./mod.ts
