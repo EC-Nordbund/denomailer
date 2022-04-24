@@ -1,5 +1,5 @@
-import { BufReader, BufWriter, TextProtoReader } from "../deps.ts";
-import { ResolvedClientOptions } from "../config/client/mod.ts";
+import { BufReader, BufWriter, TextProtoReader } from "../../deps.ts";
+import { ResolvedClientOptions } from "../../config/client/mod.ts";
 
 const encoder = new TextEncoder();
 

@@ -1,6 +1,6 @@
 import { SMTPWorkerPool } from "./pool.ts";
-import { SMTPWorker } from "./worker.ts";
-import { SMTPClient } from "./smtp.ts";
+import { SMTPWorker } from "./worker/worker.ts";
+import { SMTPClient } from "./basic/client.ts";
 import {
   ClientOptions,
   resolveClientOptions,

@@ -2,8 +2,8 @@
 /// <reference lib="deno.worker" />
 /// <reference lib="deno.unstable" />
 
-import { SMTPClient } from "./smtp.ts";
-import { ResolvedSendConfig } from "../config/mail/mod.ts";
+import { SMTPClient } from "../basic/client.ts";
+import { ResolvedSendConfig } from "../../config/mail/mod.ts";
 
 let client: SMTPClient;
 
