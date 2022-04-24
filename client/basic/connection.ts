@@ -50,7 +50,7 @@ export class SMTPConnection {
       });
     }
 
-    await this.setupConnection(this.conn);
+    this.setupConnection(this.conn);
   }
 
   public assertCode(cmd: Command | null, code: number, msg?: string) {
@@ -70,7 +70,7 @@ export class SMTPConnection {
     const result: (string | null)[] = [];
 
     while (
-      result.length === 0 || (result.at(-1) && result.at(-1)!.at(3) !== "-")
+      result.length === 0 || (result.at(-1) && result.at(-1)!.at(3) === "-")
     ) {
       result.push(await this.#reader.readLine());
     }
@@ -83,6 +83,10 @@ export class SMTPConnection {
 
     const code = parseInt(nonNullResult[0].slice(0, 3));
     const data = nonNullResult.map((v) => v.slice(4).trim());
+
+    if(this.config.debug.log) {
+      nonNullResult.forEach((v) => console.log(v))
+    }
 
     return {
       code,

@@ -152,10 +152,10 @@ export function validateConfig(
 
   if (
     !config.mimeContent.some((v) =>
-      v.mimeType.trim() === "text/html" || v.mimeType.trim() === "text/plain"
+      (v.mimeType.includes("text/html") || (v.mimeType.includes("text/plain")))
     )
   ) {
-    warn.push("You shoukd provide at least html or text content!");
+    warn.push("You should provide at least html or text content!");
   }
 
   if (client.client.warning === "log" && warn.length > 0) {
