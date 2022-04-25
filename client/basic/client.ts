@@ -338,6 +338,8 @@ export class SMTPClient {
     }
 
     if (!this.config.debug.allowUnsecure && !this.#connection.secure) {
+      this.#connection.close();
+      this.#connection = null as unknown as SMTPConnection;
       throw new Error(
         "Connection is not secure! Don't send authentication over non secure connection!",
       );

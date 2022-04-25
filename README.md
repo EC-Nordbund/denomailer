@@ -35,7 +35,174 @@ await client.close();
 
 ## Client
 
+You can create a new client with
+`const client = new SMTPClient(/* client options */)`.
+
 ### Options
+
+The only required option is `connection.hostname` but in most cases you want to
+set `connection.,auth`.
+
+Here are the full options available:
+
+```ts
+export interface ClientOptions {
+  debug?: {
+    /**
+     * USE WITH COUTION AS THIS WILL LOG YOUR USERDATA AND ALL MAIL CONTENT TO STDOUT!
+     * @default false
+     */
+    log?: boolean;
+    /**
+     * USE WITH COUTION AS THIS WILL POSIBLY EXPOSE YOUR USERDATA AND ALL MAIL CONTENT TO ATTACKERS!
+     * @default false
+     */
+    allowUnsecure?: boolean;
+    /**
+     * USE WITH COUTION AS THIS COULD INTODRUCE BUGS
+     *
+     * This option is mainly to allow debuging to exclude some possible problem surfaces at encoding
+     * @default false
+     */
+    encodeLB?: boolean;
+    /**
+     * Disable starttls
+     */
+    noStartTLS?: boolean;
+  };
+  connection: {
+    hostname: string;
+    /**
+     * For TLS the default port is 465 else 25.
+     * @default 25 or 465
+     */
+    port?: number;
+    /**
+     * authentication data
+     */
+    auth?: {
+      username: string;
+      password: string;
+    };
+    /**
+     * Set this to `true` to connect via SSL / TLS if set to `false` STARTTLS is used.
+     * Only if `allowUnsecure` is used userdata or mail content could be exposed!
+     *
+     * @default false
+     */
+    tls?: boolean;
+  };
+  /**
+   * Create multiple connections so you can send emails faster!
+   */
+  pool?: {
+    /**
+     * Number of Workers
+     * @default 2
+     */
+    size?: number;
+    /**
+     * Time the connection has to be idle to be closed. (in ms)
+     * If a value > 1h is set it will be set to 1h
+     * @default 60000
+     */
+    timeout?: number;
+  } | boolean;
+  client?: {
+    /**
+     * There are some cases where warnings are created. These are loged by default but you can 'ignore' them or all warnings should be considered 'error'.
+     *
+     * @default log
+     */
+    warning?: "ignore" | "log" | "error";
+    /**
+     * List of preproccessors to
+     *
+     * - Filter mail
+     * - BCC all mails to someone
+     * - ...
+     */
+    preprocessors?: Preprocessor[];
+  };
+}
+```
+
+#### connection
+
+You have to set the hostname and in most cases you need the auth object as
+(near) all SMTP-Server will require a login.
+
+> The only usecase where you might not need it is if you connect to a server
+> with IP protection so for example only local IP are allowed so a server
+> application can send mails without login.
+
+Denomailer supports 3 security modes:
+
+1. TLS
+2. STARTTLS
+3. unsecure
+
+You have to specify wich to use. As unsecure you have to set extra config
+options in `debug` as it is not rcomended!
+
+For TLS set `tls: true` for startTLS set `tls: false` (or don't set it).
+
+#### client
+
+There are some "problems" that can be warnings or errors. With the `warning`
+option you censpecify if they should `'error'` or you can `'ignore'` them or
+`'log'` them. Default is `'log'`. This includes filtering invalid emails and
+custom preprocessors
+
+With the `preprocessors` option you can add handlers that modify each
+mail-config. For example you can add a filter so you don't send E-Mails to
+burner mails etc.
+
+A preprocessor is of the type:
+
+```ts
+type Preprocessor = (
+  mail: ResolvedSendConfig,
+  client: ResolvedClientOptions,
+) => ResolvedSendConfig;
+```
+
+It gets a preproccesed E-Mail config (ResolvedSendConfig) and the preprocessed
+client options (ResolvedClientOptions) and has to return a (maybe modified)
+E-Mail config.
+
+#### pool
+
+With a normal SMTP-Client the E-Mails are send one after the other so if you
+have a heavy load you might want to use more Clients at once for that we have a
+pool option.
+
+You can set the amount of clients used (`size`) and a timeout (in ms) after that
+the connection is closed (`timeout`).
+
+Note that for each connection we create a new Worker and the used worker syntax
+requires (as of deno 1.21) to use the `--unstable` flag. Because of that this
+API has to be considered unstable but we don't expect a change! (At least for
+the public denomailer api internaly there might be some small changes that
+require specific deno versions)
+
+#### debug
+
+Sometimes you have specific needs for example we require encrypted connections
+to send E-Mails and authentication. To enable unsecure connections set the
+`allowUnsecure` option to `true` depending on your needs you have to disable
+startTLS to get an unsecure connection use `noStartTLS` for this.
+
+Note that we only use this in tests where the SMTP-Server is local and doesn't
+support TLS.
+
+If you want to get a full connection log use the `log` option. If you create an
+issue for a bug please add the full log (but remove your authentication data
+wich is encoded in base64).
+
+In some cases you might get problems with Linebreaks in emails before creating
+an issue please try `encodeLB: true` that changes the encoding a little and this
+might solve your problem. Please create an issue if you need this option!
 
 ### Examples
 

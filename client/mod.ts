@@ -14,7 +14,29 @@ import {
 
 /**
  * SMTP-Client with support for pool, etc.
- * TODO: example
+ * ```ts
+ * const client = new SMTPClient({
+ *   connection: {
+ *     hostname: "smtp.example.com",
+ *     port: 465,
+ *     tls: true,
+ *     auth: {
+ *       username: "example",
+ *       password: "password",
+ *     },
+ *   },
+ * });
+ *
+ * await client.send({
+ *   from: "me@example.com",
+ *   to: "you@example.com",
+ *   subject: "example",
+ *   content: "...",
+ *   html: "<p>...</p>",
+ * });
+ *
+ * await client.close();
+ * ```
  */
 export class SMTPHandler {
   #internalClient: SMTPWorker | SMTPWorkerPool | SMTPClient;
@@ -23,7 +45,34 @@ export class SMTPHandler {
   /**
    * create a new SMTPClient
    *
-   * TODO: example
+   * ```ts
+   * const client = new SMTPClient({
+   *   connection: {
+   *     hostname: "smtp.example.com",
+   *     port: 465,
+   *     tls: true,
+   *     auth: {
+   *       username: "example",
+   *       password: "password",
+   *     },
+   *   },
+   *   pool: {
+   *     size: 2,
+   *     timeout: 60000
+   *   },
+   *   client: {
+   *     warning: 'log',
+   *     preprocessors: [filterBurnerMails]
+   *   },
+   *   debug: {
+   *     log: false,
+   *     allowUnsecure: false,
+   *     encodeLB: false,
+   *     noStartTLS: false
+   *   }
+   * });
+   *
+   * ```
    *
    * @param config client config
    */

@@ -109,7 +109,7 @@ export interface ClientOptions {
   };
 }
 
-type Preprocessor = (
+export type Preprocessor = (
   mail: ResolvedSendConfig,
   client: ResolvedClientOptions,
 ) => ResolvedSendConfig;
