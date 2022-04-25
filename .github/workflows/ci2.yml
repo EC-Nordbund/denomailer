@@ -1,0 +1,19 @@
+name: test
+
+on:
+  push:
+    branches:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      - run: docker run -d -p 1080:1080 -p 1025:1025 reachfive/fake-smtp-server
+      - run: deno test --unstable -A ./test/e2e/basic.test.ts
+      - run: deno fmt --check
+      - run: deno lint

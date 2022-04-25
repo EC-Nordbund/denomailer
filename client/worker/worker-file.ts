@@ -2,10 +2,10 @@
 /// <reference lib="deno.worker" />
 /// <reference lib="deno.unstable" />
 
-import { SmtpClient } from "./smtp.ts";
-import { SendConfig } from "./config.ts";
+import { SMTPClient } from "../basic/client.ts";
+import { ResolvedSendConfig } from "../../config/mail/mod.ts";
 
-const client = new SmtpClient({ console_debug: true });
+let client: SMTPClient;
 
 let cb: () => void;
 const readyPromise = new Promise<void>((res) => {
@@ -14,7 +14,7 @@ const readyPromise = new Promise<void>((res) => {
 
 let hasIdlePromise = false;
 
-async function send(config: SendConfig) {
+async function send(config: ResolvedSendConfig) {
   client.send(config);
 
   if (!hasIdlePromise) {
@@ -27,7 +27,7 @@ async function send(config: SendConfig) {
 
 addEventListener("message", async (ev: MessageEvent) => {
   if (ev.data.__setup) {
-    await client.connectTLS(ev.data.__setup);
+    client = new SMTPClient(ev.data.__setup);
     cb();
     return;
   }
@@ -35,6 +35,20 @@ addEventListener("message", async (ev: MessageEvent) => {
     postMessage(client.isSending);
     return;
   }
-  await readyPromise;
-  send(ev.data);
+
+  if (ev.data.__mail) {
+    await readyPromise;
+    try {
+      const data = await send(ev.data.mail);
+      postMessage({
+        __ret: ev.data.__mail,
+        res: data,
+      });
+    } catch (ex) {
+      postMessage({
+        __ret: ev.data.__mail,
+        err: ex,
+      });
+    }
+  }
 });

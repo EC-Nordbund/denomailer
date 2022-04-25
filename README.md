@@ -1,15 +1,296 @@
-## Deno SMTP mail client
+# Denomailer a SMTP-client for Deno
 
-### IMPORTANT SECURITY INFORMATION
+> This was forked from https://github.com/manyuanrong/deno-smtp but now is much
+> more advanced!
 
-PLEASE update to a version >= 0.8! 0.8 has a problem where malformed mails could
-potentialy allow attackers to create a mail (with linebreaks) to send unwanted
-SMTP commands. This could result in authentic phishing attacks! With no way for
-the user to identify that this is a phishing mail! Or that this mail contains a
-dangerous attachment!
+## Quickstart with a simple example
 
-Also make sure that Mails are sent one after the other as they can corrupt each
-others data!
+```ts
+// please use this line and change the version to the latest version!
+// import { SMTPClient } from 'https://deno.land/x/denomailer@x.x.x/mod.ts'
+import { SMTPClient } from "https://deno.land/x/denomailer/mod.ts";
+
+const client = new SMTPClient({
+  connection: {
+    hostname: "smtp.example.com",
+    port: 465,
+    tls: true,
+    auth: {
+      username: "example",
+      password: "password",
+    },
+  },
+});
+
+await client.send({
+  from: "me@example.com",
+  to: "you@example.com",
+  subject: "example",
+  content: "...",
+  html: "<p>...</p>",
+});
+
+await client.close();
+```
+
+## Client
+
+You can create a new client with
+`const client = new SMTPClient(/* client options */)`.
+
+### Options
+
+The only required option is `connection.hostname` but in most cases you want to
+set `connection.,auth`.
+
+Here are the full options available:
+
+```ts
+export interface ClientOptions {
+  debug?: {
+    /**
+     * USE WITH COUTION AS THIS WILL LOG YOUR USERDATA AND ALL MAIL CONTENT TO STDOUT!
+     * @default false
+     */
+    log?: boolean;
+    /**
+     * USE WITH COUTION AS THIS WILL POSIBLY EXPOSE YOUR USERDATA AND ALL MAIL CONTENT TO ATTACKERS!
+     * @default false
+     */
+    allowUnsecure?: boolean;
+    /**
+     * USE WITH COUTION AS THIS COULD INTODRUCE BUGS
+     *
+     * This option is mainly to allow debuging to exclude some possible problem surfaces at encoding
+     * @default false
+     */
+    encodeLB?: boolean;
+    /**
+     * Disable starttls
+     */
+    noStartTLS?: boolean;
+  };
+  connection: {
+    hostname: string;
+    /**
+     * For TLS the default port is 465 else 25.
+     * @default 25 or 465
+     */
+    port?: number;
+    /**
+     * authentication data
+     */
+    auth?: {
+      username: string;
+      password: string;
+    };
+    /**
+     * Set this to `true` to connect via SSL / TLS if set to `false` STARTTLS is used.
+     * Only if `allowUnsecure` is used userdata or mail content could be exposed!
+     *
+     * @default false
+     */
+    tls?: boolean;
+  };
+  /**
+   * Create multiple connections so you can send emails faster!
+   */
+  pool?: {
+    /**
+     * Number of Workers
+     * @default 2
+     */
+    size?: number;
+    /**
+     * Time the connection has to be idle to be closed. (in ms)
+     * If a value > 1h is set it will be set to 1h
+     * @default 60000
+     */
+    timeout?: number;
+  } | boolean;
+  client?: {
+    /**
+     * There are some cases where warnings are created. These are loged by default but you can 'ignore' them or all warnings should be considered 'error'.
+     *
+     * @default log
+     */
+    warning?: "ignore" | "log" | "error";
+    /**
+     * List of preproccessors to
+     *
+     * - Filter mail
+     * - BCC all mails to someone
+     * - ...
+     */
+    preprocessors?: Preprocessor[];
+  };
+}
+```
+
+#### connection
+
+You have to set the hostname and in most cases you need the auth object as
+(near) all SMTP-Server will require a login.
+
+> The only usecase where you might not need it is if you connect to a server
+> with IP protection so for example only local IP are allowed so a server
+> application can send mails without login.
+
+Denomailer supports 3 security modes:
+
+1. TLS
+2. STARTTLS
+3. unsecure
+
+You have to specify wich to use. As unsecure you have to set extra config
+options in `debug` as it is not rcomended!
+
+For TLS set `tls: true` for startTLS set `tls: false` (or don't set it).
+
+#### client
+
+There are some "problems" that can be warnings or errors. With the `warning`
+option you censpecify if they should `'error'` or you can `'ignore'` them or
+`'log'` them. Default is `'log'`. This includes filtering invalid emails and
+custom preprocessors
+
+With the `preprocessors` option you can add handlers that modify each
+mail-config. For example you can add a filter so you don't send E-Mails to
+burner mails etc.
+
+A preprocessor is of the type:
+
+```ts
+type Preprocessor = (
+  mail: ResolvedSendConfig,
+  client: ResolvedClientOptions,
+) => ResolvedSendConfig;
+```
+
+It gets a preproccesed E-Mail config (ResolvedSendConfig) and the preprocessed
+client options (ResolvedClientOptions) and has to return a (maybe modified)
+E-Mail config.
+
+#### pool
+
+With a normal SMTP-Client the E-Mails are send one after the other so if you
+have a heavy load you might want to use more Clients at once for that we have a
+pool option.
+
+You can set the amount of clients used (`size`) and a timeout (in ms) after that
+the connection is closed (`timeout`).
+
+Note that for each connection we create a new Worker and the used worker syntax
+requires (as of deno 1.21) to use the `--unstable` flag. Because of that this
+API has to be considered unstable but we don't expect a change! (At least for
+the public denomailer api internaly there might be some small changes that
+require specific deno versions)
+
+When you close the connection all worker are just killed.
+
+#### debug
+
+Sometimes you have specific needs for example we require encrypted connections
+to send E-Mails and authentication. To enable unsecure connections set the
+`allowUnsecure` option to `true` depending on your needs you have to disable
+startTLS to get an unsecure connection use `noStartTLS` for this.
+
+Note that we only use this in tests where the SMTP-Server is local and doesn't
+support TLS.
+
+If you want to get a full connection log use the `log` option. If you create an
+issue for a bug please add the full log (but remove your authentication data
+wich is encoded in base64).
+
+In some cases you might get problems with Linebreaks in emails before creating
+an issue please try `encodeLB: true` that changes the encoding a little and this
+might solve your problem. Please create an issue if you need this option!
+
+### Examples
+
+```ts
+const client = new SMTPClient({
+  connection: {
+    hostname: "smtp.example.com",
+    port: 465,
+    tls: true,
+    auth: {
+      username: "example",
+      password: "password",
+    },
+  },
+  pool: {
+    size: 2,
+    timeout: 60000,
+  },
+  client: {
+    warning: "log",
+    preprocessors: [filterBurnerMails],
+  },
+  debug: {
+    log: false,
+    allowUnsecure: false,
+    encodeLB: false,
+    noStartTLS: false,
+  },
+});
+```
+
+## Sending Mails
+
+Just call `client.send(/* mail config */)`
+
+### Config
+
+The config you can set:
+
+```ts
+export interface SendConfig {
+  to: mailList;
+  cc?: mailList;
+  bcc?: mailList;
+  from: string;
+  date?: string;
+  subject: string;
+  content?: string;
+  mimeContent?: Content[];
+  html?: string;
+  inReplyTo?: string;
+  replyTo?: string;
+  references?: string;
+  priority?: "high" | "normal" | "low";
+  attachments?: Attachment[];
+  /**
+   * type of mail for example `registration` or `newsletter` etc.
+   * allowes preprocessors to hande different email types
+   */
+  internalTag?: string | symbol;
+}
+```
+
+All of it should be clear by name except:
+
+#### mimeContent
+
+There are use cases where you want to do encoding etc. on your own. This option
+allowes you to specify the content of the mail.
+
+#### content & html
+
+The content should be a plain-text version of the html content you can set
+`content` to `'auto'` to generate that by denomailer but in most cases you
+should do it on your own!
+
+#### attachments
+
+A array of attachments you can encode it as base64, text, binary. Note that
+base64 is converted to binary and only there for a better API. So don't encode
+your binary files as base64 so denomailer can convert it back to binary.
+
+#### internalTag
+
+This can be used with preprocessors so you can give a mail a type for example
+`'registration'`, `'newsletter'` etc. supports symbols and strings.
 
 ### Allowed Mail Formats
 
@@ -22,8 +303,6 @@ following ways:
 4. `{mail: "name@example.de"}`
 5. `{mail: "name@example.de", name: "NAME"}`
 
-Where 1-3 is called a "MailString".
-
 Multiple Mails can be an Array of the above OR a object that maps names to mails
 for example:
 
@@ -31,152 +310,109 @@ for example:
 
 For the fields
 
-1. `from`, `replyTo` we only allow a "MailString".
-2. `to`, `cc`, `bcc` we allow a MailObject a Array of single Mails or a single
-   Mail.
+1. `from`, `replyTo` we only allow a single mail string.
+2. `to`, `cc`, `bcc` we allow a MailObject a Array of single Mails (you can mix
+   formats) or a single Mail.
 
-### Sending multiple mails
+### Examples
 
-Note that for race-condition reasons we can't send multiple mails at once.
-Because of that if send is already called and still processing a mail
-`client.send` will queue that sending.
-
-### Example
+Example with near all options:
 
 ```ts
-import { SmtpClient, quotedPrintableEncode } from "https://deno.land/x/denomailer/mod.ts";
-
-const client = new SmtpClient();
-
-await client.connect({
-  hostname: "smtp.163.com",
-  port: 25,
-  username: "username",
-  password: "password",
-});
-
-await client.send({
-  from: "mailaddress@163.com",
-  to: "Me <to-address@xx.com>",
+client.send({
+  to: "abc@example.com",
   cc: [
-    "name@example.de",
-    "<name@example.de>",
-    "NAME <name@example.de>",
-    {mail: "name@example.de"},
-    {mail: "name@example.de", name: "NAME"}
+    "abc@example.com",
+    "abc <abc@example.com>",
+    {
+      name: "abc",
+      mail: "abc@example.com",
+    },
   ],
   bcc: {
-    "Me": "to-address@xx.com"
+    abc: "abc@example.com",
+    other: "abc@example.com",
   },
-  subject: "Mail Title",
-  content: "Mail Content",
-  html: "<a href='https://github.com'>Github</a>",
-  date: "12 Mar 2022 10:38:05 GMT",
-  priority: "high",
-  replyTo: 'mailaddress@163.com',
-  attachments: [
-    { encoding: "text"; content: 'Hi', contentType: 'text/plain', filename: 'text.txt' },
-    { encoding: "base64"; content: '45dasjZ==', contentType: 'image/png', filename: 'img.png' },
-    {
-      content: new Uint8Array([0,244,123]),
-      encoding: "binary",
-      contentType: 'image/jpeg', 
-      filename: 'bin.png'
-    }
-  ],
-  mimeContent: [
-    {
-      mimeType: 'application/markdown',
-      content: quotedPrintableEncode('# Title\n\nHello World!'),
-      transferEncoding: 'quoted-printable'
-    }
-  ]
-  
-});
-
-await client.close();
-```
-
-#### TLS connection
-
-```ts
-await client.connectTLS({
-  hostname: "smtp.163.com",
-  port: 465,
-  username: "username",
-  password: "password",
+  from: "me <abc@example.com>",
+  replyTo: "<abc@example.com>",
+  subject: "example",
+  content: "auto",
+  html: "<p>Hello World</p>",
+  internalTag: "newsletter",
+  priority: "low",
 });
 ```
 
-#### Use in Gmail
+## Other exports
 
-```ts
-await client.connectTLS({
-  hostname: "smtp.gmail.com",
-  port: 465,
-  username: "your username",
-  password: "your password",
-});
+We export our implementation of an quotedPrintable encoder. There might be some
+use cases where you need it. The api of the function is considered stable!
 
-await client.send({
-  from: "someone@163.com", // Your Email address
-  to: "someone@xx.com", // Email address of the destination
-  subject: "Mail Title",
-  content: "Mail Content，maybe HTML",
-});
+## Stable api
 
-await client.close();
-```
+All api exported by `/mod.ts` is considered stable. But as the `pool` need the
+`--unstable` flag by Deno this has to be considered unstable. But we don't
+expect any breaking changes there - but if deno changes sytax etc. a new deno
+release can break it!
 
-### Filter E-Mails
-If you want a custom E-Mail validator and filter some E-Mails (because they are burner mails or the domain is on a blacklist or only allow specific domains etc.) you can add the `mailFilter` option to the smtp-client constructor options. `mailFilter` takes a function that gets 3 Arguments the "mailbox" (all that is before @ in the mail), the "domain" (what is after the @) and `internalTag` that is a new option that can be set in the mailConfig so you can set a type for that mail for example type `newsletter` etc. `internalTag` can be a `string` or a `symbol`.
+Changes to them will only be made if a new major is released.
 
-The filter function returns a boolean or a Promise that resolves to a boolean. There are 3 things you can do when this function is called:
+## Contribute
 
-1. return `true` the E-Mail is keept in the list
-2. return `false` the E-Mail is removed from the list
-3. throw an Error the E-Mail is aborted and never send
+Feel free to contribute by:
 
-So you can decide if a single mail error results in a complete mail abort or it only get removed from the list.
-
-You can for example validate against this list: https://github.com/wesbos/burner-email-providers.
-
-
-### Configuring your client
-
-You can pass options to your client through the `SmtpClient` constructor.
-
-```ts
-import { SmtpClient } from "https://deno.land/x/denomailer/mod.ts";
-
-//Defaults
-const client = new SmtpClient({
-  console_debug: true, // enable debugging this is good while developing should be false in production as Authentication IS LOGGED TO CONSOLE!
-  unsecure: true, // allow unsecure connection to send authentication IN PLAIN TEXT and also mail content!
-});
-```
-
-## Pool, Worker
-> This is unstable API may change! This requires deno to run in unstable mode.
-
-Adds 2 new classes `SMTPWorker` and `SMTPWorkerPool` (for constructor options see code for now). This creates a SMTP client (or multiple) that get automaticly killed if the connection is not used for around 60s.
+1. creating issues for bugs and feature requests (note that you have to use the
+   bug template to get support)
+2. contribute code but keep in mind
+   - for small changes you can just create a PR
+   - for bigger changes please create an issue before! This will help to reduce
+     time creating PR that are not merged.
+   - if you fix a bug please add a test that fails before your fix
+3. contribute tests, fix typos, ...
 
 ## TLS issues
-When getting TLS errors make shure:
+
+When getting TLS errors make sure:
+
 1. you use the correct port (mostly 25, 587, 465)
-2. the server supports STARTTLS when using `client.connect`
-3. the server supports TLS when using `client.connectTLS`
-4. Use the command `openssl s_client -debug -starttls smtp -crlf -connect your-host.de:587` or `openssl s_client -debug -crlf -connect your-host.de:587` and get the used cipher this should be a cipher with "forward secrecy". Check the status of the cipher on https://ciphersuite.info/cs/ . If the cipher is not STRONG this is an issue with your mail provider so you have to contact them to fix it.
-5. Feel free to create issues if you are ok with that share the port and host so a proper debug can be done.
-6. We can only support TLS where Deno supports it and Deno uses rustls wich explicitly not implemented some "weak" ciphers.
+2. the server supports STARTTLS when using `connection.tls = false`
+3. the server supports TLS when using `connection.tls = true`
+4. Use the command
+   `openssl s_client -debug -starttls smtp -crlf -connect your-host.de:587` or
+   `openssl s_client -debug -crlf -connect your-host.de:587` and get the used
+   cipher this should be a cipher with "forward secrecy". Check the status of
+   the cipher on https://ciphersuite.info/cs/ . If the cipher is not STRONG this
+   is an issue with your mail provider so you have to contact them to fix it.
+5. Feel free to create issues if you are ok with that share the port and host so
+   a proper debug can be done.
+6. We can only support TLS where Deno supports it and Deno uses rustls wich
+   explicitly not implemented some "weak" ciphers.
 
+## Non SpecCompliant SMTP-Server
 
-### Non SpecCompliant SMTP-Server
-There are some SMTP-Server that don't follow the spec to 100%. This can result in unexpected errors in denomailer. If this happens (for example in https://github.com/EC-Nordbund/denomailer/blob/03a66a6f9a4b5f349ea35856f5903fb45fd0cc5f/smtp.ts#L376 the server sends a 250) please create an issue. We will try and do the following:
+There are some SMTP-Server that don't follow the spec to 100%. This can result
+in unexpected errors in denomailer. If this happens (for example in
+https://github.com/EC-Nordbund/denomailer/blob/03a66a6f9a4b5f349ea35856f5903fb45fd0cc5f/smtp.ts#L376
+the server sends a 250) please create an issue. We will try and do the
+following:
 
 1. Check if it is not an error in denomailer
-2. Try to fix it at the SMTP-Server side (create an issue if the server is an opensource project etc.)
-3. We will add a ***temporary*** workaround by changing denomailer. This will include log messages telling the developer (if the workaround is used) that denomailer used the workaround wich can be removed at any time.
+2. Try to fix it at the SMTP-Server side (create an issue if the server is an
+   opensource project etc.)
+3. We will add a _**temporary**_ workaround by changing denomailer. This will
+   include log messages telling the developer (if the workaround is used) that
+   denomailer used the workaround wich can be removed at any time.
 
+## Breaking changes
 
+### v0.x -> v1.0
 
+1. Import `SMTPClient` not `SmtpClient`
+2. Change the constructor options (include the options used with
+   `client.connect` or `client.connectTLS` (add `tls = true` in the second
+   case))
+3. Remove `client.connect` and `client.connectTLS` calls
+4. filterMail option was removed in favor of new preprocessor option
+5. The `client.send` method did not have any breaking changes.
+6. Some internal fields where removed from `SMTPClient` only use `send` and
+   `close`! But in 99% of project these where not used
