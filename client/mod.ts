@@ -107,7 +107,30 @@ export class SMTPHandler {
 
   /**
    * Sends a E-Mail with the correspondig config.
-   * TODO: examples
+   * ```ts
+   * client.send({
+   *   to: 'abc@example.com',
+   *   cc: [
+   *     'abc@example.com',
+   *     'abc <abc@example.com>',
+   *     {
+   *       name: 'abc',
+   *       mail: 'abc@example.com'
+   *     }
+   *   ],
+   *   bcc: {
+   *     abc: 'abc@example.com',
+   *     other: 'abc@example.com'
+   *   },
+   *   from: 'me <abc@example.com>',
+   *   replyTo: '<abc@example.com>',
+   *   subject: 'example',
+   *   content: 'auto',
+   *   html: '<p>Hello World</p>',
+   *   internalTag: 'newsletter',
+   *   priority: 'low'
+   * })
+   * ```
    * @param config Email config
    * @returns nothing (for now as this might change in the future!)
    */

@@ -186,6 +186,8 @@ API has to be considered unstable but we don't expect a change! (At least for
 the public denomailer api internaly there might be some small changes that
 require specific deno versions)
 
+When you close the connection all worker are just killed.
+
 #### debug
 
 Sometimes you have specific needs for example we require encrypted connections
@@ -206,9 +208,89 @@ might solve your problem. Please create an issue if you need this option!
 
 ### Examples
 
+```ts
+const client = new SMTPClient({
+  connection: {
+    hostname: "smtp.example.com",
+    port: 465,
+    tls: true,
+    auth: {
+      username: "example",
+      password: "password",
+    },
+  },
+  pool: {
+    size: 2,
+    timeout: 60000,
+  },
+  client: {
+    warning: "log",
+    preprocessors: [filterBurnerMails],
+  },
+  debug: {
+    log: false,
+    allowUnsecure: false,
+    encodeLB: false,
+    noStartTLS: false,
+  },
+});
+```
+
 ## Sending Mails
 
-### Options
+Just call `client.send(/* mail config */)`
+
+### Config
+
+The config you can set:
+
+```ts
+export interface SendConfig {
+  to: mailList;
+  cc?: mailList;
+  bcc?: mailList;
+  from: string;
+  date?: string;
+  subject: string;
+  content?: string;
+  mimeContent?: Content[];
+  html?: string;
+  inReplyTo?: string;
+  replyTo?: string;
+  references?: string;
+  priority?: "high" | "normal" | "low";
+  attachments?: Attachment[];
+  /**
+   * type of mail for example `registration` or `newsletter` etc.
+   * allowes preprocessors to hande different email types
+   */
+  internalTag?: string | symbol;
+}
+```
+
+All of it should be clear by name except:
+
+#### mimeContent
+
+There are use cases where you want to do encoding etc. on your own. This option
+allowes you to specify the content of the mail.
+
+#### content & html
+
+The content should be a plain-text version of the html content you can set
+`content` to `'auto'` to generate that by denomailer but in most cases you
+should do it on your own!
+
+#### attachments
+
+A array of attachments you can encode it as base64, text, binary. Note that
+base64 is converted to binary and only there for a better API. So don't encode
+your binary files as base64 so denomailer can convert it back to binary.
+
+#### internalTag
+
+This can be used with preprocessors so you can give a mail a type for example
+`'registration'`, `'newsletter'` etc. supports symbols and strings.
 
 ### Allowed Mail Formats
 
@@ -228,11 +310,38 @@ for example:
 
 For the fields
 
-1. `from`, `replyTo` we only allow a single mail.
+1. `from`, `replyTo` we only allow a single mail string.
 2. `to`, `cc`, `bcc` we allow a MailObject a Array of single Mails (you can mix
    formats) or a single Mail.
 
 ### Examples
+
+Example with near all options:
+
+```ts
+client.send({
+  to: "abc@example.com",
+  cc: [
+    "abc@example.com",
+    "abc <abc@example.com>",
+    {
+      name: "abc",
+      mail: "abc@example.com",
+    },
+  ],
+  bcc: {
+    abc: "abc@example.com",
+    other: "abc@example.com",
+  },
+  from: "me <abc@example.com>",
+  replyTo: "<abc@example.com>",
+  subject: "example",
+  content: "auto",
+  html: "<p>Hello World</p>",
+  internalTag: "newsletter",
+  priority: "low",
+});
+```
 
 ## Other exports
 
