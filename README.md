@@ -3,6 +3,10 @@
 > This was forked from https://github.com/manyuanrong/deno-smtp but now is much
 > more advanced!
 
+## Deno Deploy
+If your SMTP server uses port 25, 465 or 587 you can't use denomailer with deno deploy. See https://discord.com/channels/684898665143206084/684911491035430919/961964433524031498 for more info.
+> "You can not connect to SMTP servers on ports 25, 465, or 587 due to abuse."
+
 ## Quickstart with a simple example
 
 ```ts
