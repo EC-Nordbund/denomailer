@@ -30,8 +30,8 @@ Provide the output of `deno --version`
 Put output here
 ```
 
-Provide the output of your code snippet (with console_debug set to true see
-https://github.com/EC-Nordbund/denomailer#configuring-your-client )
+Provide the output of your code snippet (with `debug.log` set to true see
+hhttps://github.com/EC-Nordbund/denomailer#options )
 
 ```
 Put log here
