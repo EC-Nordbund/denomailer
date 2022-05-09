@@ -22,6 +22,7 @@ export class SMTPConnection {
   ready: Promise<void>;
 
   async close() {
+    await this.ready;
     if (!this.conn) {
       return;
     }
