@@ -274,13 +274,14 @@ export interface SendConfig {
    * allowes preprocessors to hande different email types
    */
   internalTag?: string | symbol;
-  headers: Record<string, string>
+  headers: Record<string, string>;
 }
 ```
 
 All of it should be clear by name except:
 
 #### headers
+
 Add custom headers to the email.
 
 #### mimeContent
