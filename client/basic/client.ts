@@ -143,6 +143,13 @@ export class SMTPClient {
 
       await this.#connection.writeCmd("Date: ", config.date);
 
+      const obj = Object.entries(config.headers);
+
+      for (let i = 0; i < obj.length; i++) {
+        const [name, value] = obj[i];
+        await this.#connection.writeCmd(name + ": ", value);
+      }
+
       if (config.inReplyTo) {
         await this.#connection.writeCmd("InReplyTo: ", config.inReplyTo);
       }

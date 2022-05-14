@@ -13,7 +13,7 @@ import {
   validateEmailList,
 } from "./email.ts";
 import { ResolvedClientOptions } from "../client.ts";
-
+import { Headers, validateHeaders } from "./headers.ts";
 /**
  * Config for a mail
  */
@@ -37,6 +37,7 @@ export interface SendConfig {
    * allowes preprocessors to hande different email types
    */
   internalTag?: string | symbol;
+  headers?: Headers
 }
 
 export interface ResolvedSendConfig {
@@ -53,6 +54,7 @@ export interface ResolvedSendConfig {
   priority?: "high" | "normal" | "low";
   attachments: ResolvedAttachment[];
   internalTag?: string | symbol;
+  headers: Headers
 }
 
 export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
@@ -72,6 +74,7 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     priority,
     attachments,
     internalTag,
+    headers
   } = config;
 
   return {
@@ -94,6 +97,7 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     references,
     priority,
     internalTag,
+    headers: headers ?? ({} as Headers)
   };
 }
 
@@ -158,6 +162,10 @@ export function validateConfig(
     )
   ) {
     warn.push("You should provide at least html or text content!");
+  }
+
+  if(!validateHeaders(config.headers)) {
+    errors.push(`Headers are not allowed to include linebreaks!`);
   }
 
   if (client.client.warning === "log" && warn.length > 0) {
