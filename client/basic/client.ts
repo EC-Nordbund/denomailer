@@ -260,11 +260,10 @@ export class SMTPClient {
 
         await this.#connection.writeCmd(
           "Content-Disposition: attachment; filename=" + attachment.filename,
-          "\r\n",
         );
 
         if (attachment.encoding === "binary") {
-          await this.#connection.writeCmd("Content-Transfer-Encoding: binary");
+          await this.#connection.writeCmd("Content-Transfer-Encoding: binary\r\n");
 
           if (
             attachment.content instanceof ArrayBuffer ||
