@@ -186,7 +186,7 @@ export class SMTPClient {
       const dec = new TextDecoder();
 
       config.attachments.map((v) => {
-        if (v.encoding === "text") return v.content;
+        if (v.encoding === "text" || v.encoding === "base64") return v.content;
 
         const arr = new Uint8Array(v.content);
 
@@ -279,10 +279,22 @@ export class SMTPClient {
           await this.#connection.writeCmd("\r\n");
         } else if (attachment.encoding === "text") {
           await this.#connection.writeCmd(
-            "Content-Transfer-Encoding: quoted-printable",
+            "Content-Transfer-Encoding: quoted-printable\r\n",
           );
 
           await this.#connection.writeCmd(attachment.content, "\r\n");
+        } else if (attachment.encoding === "base64") {
+          await this.#connection.writeCmd(
+            "Content-Transfer-Encoding: base64",
+          );
+
+          await this.#connection.writeCmd(
+            `Content-Disposition: attachment; filename=${attachment.filename}\r\n`,
+          );
+
+          for (let i = 0; i < attachment.content.length; i = i + 76) {
+            await this.#connection.writeCmd(attachment.content.slice(i, i + 76));
+          }
         }
       }
 
