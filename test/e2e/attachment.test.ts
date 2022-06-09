@@ -88,75 +88,48 @@ Deno.test("test binary attachment", async () => {
   await client.close();
 });
 
-// Deno.test("test subject", async () => {
-//   await clearEmails();
+Deno.test("test more text attachment", async () => {
+  await clearEmails();
 
-//   const client = new SMTPClient({
-//     debug: {
-//       allowUnsecure: true,
-//       // log: true,
-//       noStartTLS: true,
-//     },
-//     connection: {
-//       hostname: "localhost",
-//       port: 1025,
-//       tls: false,
-//     },
-//   });
+  const client = new SMTPClient({
+    debug: {
+      allowUnsecure: true,
+      // log: true,
+      noStartTLS: true,
+    },
+    connection: {
+      hostname: "localhost",
+      port: 1025,
+      tls: false,
+    },
+  });
 
-//   const subject = Math.random().toString();
+  const content = [
+    "abc\ndef\nghi",
+    "abc\rdef\rghi",
+    "abc\ndef\rghi",
+    "abc\rdef\ndhi",
+  ];
 
-//   await client.send({
-//     from: "me@denomailer.example",
-//     to: "you@denomailer.example",
-//     subject,
-//     content: "test",
-//   });
+  for (let i = 0; i < content.length; i++) {
+    await client.send({
+      from: "me@denomailer.example",
+      to: "you@denomailer.example",
+      subject: "testing",
+      content: "test",
+      attachments: [
+        {
+          content: content[i],
+          filename: "text.txt",
+          encoding: "text",
+          contentType: "text/plain",
+        },
+      ],
+    });
 
-//   await wait(2000);
-
-//   const mails = await getEmails();
-//   assertEquals(mails.length, 1);
-//   assertEquals(mails[0].subject, subject);
-//   await client.close();
-// });
-
-// Deno.test("test html", async () => {
-//   await clearEmails();
-
-//   const client = new SMTPClient({
-//     debug: {
-//       allowUnsecure: true,
-//       // log: true,
-//       noStartTLS: true,
-//     },
-//     connection: {
-//       hostname: "localhost",
-//       port: 1025,
-//       tls: false,
-//     },
-//   });
-
-//   const testSet = [
-//     "<p>asdjhhj</p>",
-//     "<p>kljfskjlsfs",
-//     "</p>dkjasjd<p>",
-//     // TODO add some long testsets with linebreaks etc.
-//   ];
-
-//   for (const html of testSet) {
-//     await clearEmails();
-//     await client.send({
-//       from: "me@denomailer.example",
-//       to: "you@denomailer.example",
-//       subject: "testing",
-//       content: "test",
-//       html,
-//     });
-
-//     const mails = await getEmails();
-//     assertEquals(mails.length, 1);
-//     assertEquals(mails[0].html.toString().trim(), html);
-//   }
-//   await client.close();
-// });
+    const mails = await getEmails();
+    const data = new Uint8Array(mails[0].attachments[0].content.data);
+    assertEquals(new TextDecoder().decode(data).trim(), content[i].trim());
+  }
+  await client.close();
+});
