@@ -62,7 +62,7 @@ Deno.test("test binary attachment", async () => {
   });
 
   const content = await Deno.readFile(
-    new URL("./attachments/image.png", import.meta.url).href,
+    Deno.cwd() + "/test/e2e/attachments/image.png",
   );
 
   await client.send({
