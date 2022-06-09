@@ -259,11 +259,14 @@ export class SMTPClient {
         );
 
         await this.#connection.writeCmd(
-          "Content-Disposition: attachment; filename=" + attachment.filename
+          "Content-Disposition: attachment; filename=" + attachment.filename,
         );
 
         if (attachment.encoding === "binary") {
-          await this.#connection.writeCmd("Content-Transfer-Encoding: binary");
+          await this.#connection.writeCmd(
+            "Content-Transfer-Encoding: binary",
+            "\r\n",
+          );
 
           if (
             attachment.content instanceof ArrayBuffer ||
@@ -280,6 +283,7 @@ export class SMTPClient {
         } else if (attachment.encoding === "text") {
           await this.#connection.writeCmd(
             "Content-Transfer-Encoding: quoted-printable",
+            "\r\n",
           );
 
           await this.#connection.writeCmd(attachment.content, "\r\n");
