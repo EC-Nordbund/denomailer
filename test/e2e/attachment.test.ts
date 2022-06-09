@@ -22,6 +22,8 @@ Deno.test("test text attachment", async () => {
     },
   });
 
+  const content = "Hello\nWorld";
+
   await client.send({
     from: "me@denomailer.example",
     to: "you@denomailer.example",
@@ -29,7 +31,7 @@ Deno.test("test text attachment", async () => {
     content: "test",
     attachments: [
       {
-        content: "Hello\rWorld!",
+        content,
         filename: "text.txt",
         encoding: "text",
         contentType: "text/plain",
@@ -40,8 +42,8 @@ Deno.test("test text attachment", async () => {
   await wait(1);
 
   const mails = await getEmails();
-  console.log(mails[0].attachments);
-  assertEquals(mails.length, 1);
+  const data = new Uint8Array(mails[0].attachments[0].content.data);
+  assertEquals(new TextDecoder().decode(data), content);
   await client.close();
 });
 
