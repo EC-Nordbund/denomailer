@@ -259,8 +259,7 @@ export class SMTPClient {
         );
 
         await this.#connection.writeCmd(
-          "Content-Disposition: attachment; filename=" + attachment.filename,
-          "\r\n",
+          "Content-Disposition: attachment; filename=" + attachment.filename
         );
 
         if (attachment.encoding === "binary") {
