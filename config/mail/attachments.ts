@@ -3,7 +3,7 @@ import { base64Decode } from "./encoding.ts";
 interface baseAttachment {
   contentType: string;
   filename: string;
-  contentID?: string | number
+  contentID?: string | number;
 }
 
 export type Attachment =

@@ -258,7 +258,7 @@ export class SMTPClient {
           "name=" + attachment.filename,
         );
 
-        if(attachment.contentID) {
+        if (attachment.contentID) {
           await this.#connection.writeCmd(
             `Content-ID: <${attachment.contentID}>`,
           );
