@@ -61,7 +61,9 @@ Deno.test("test binary attachment", async () => {
     },
   });
 
-  const content = await Deno.readFile(new URL("./attachments/image.png", import.meta.url).href);
+  const content = await Deno.readFile(
+    new URL("./attachments/image.png", import.meta.url).href,
+  );
 
   await client.send({
     from: "me@denomailer.example",
