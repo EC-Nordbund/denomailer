@@ -31,9 +31,13 @@ Deno.test("test text attachment", async () => {
       {
         content: "Hello\rWorld!",
         filename: "text.txt",
+        encoding: "text",
+        contentType: "text/plain",
       },
     ],
   });
+
+  await wait(1);
 
   const mails = await getEmails();
   console.log(mails[0].attachments);
