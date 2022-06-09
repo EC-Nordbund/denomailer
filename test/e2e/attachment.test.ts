@@ -39,44 +39,52 @@ Deno.test("test text attachment", async () => {
     ],
   });
 
-  await wait(1);
-
   const mails = await getEmails();
   const data = new Uint8Array(mails[0].attachments[0].content.data);
   assertEquals(new TextDecoder().decode(data).trim(), content.trim());
   await client.close();
 });
 
-// Deno.test("test simplest mail with pool", async () => {
-//   await clearEmails();
+Deno.test("test binary attachment", async () => {
+  await clearEmails();
 
-//   const client = new SMTPClient({
-//     debug: {
-//       allowUnsecure: true,
-//       // log: true,
-//       noStartTLS: true,
-//     },
-//     connection: {
-//       hostname: "localhost",
-//       port: 1025,
-//       tls: false,
-//     },
-//     pool: true,
-//   });
+  const client = new SMTPClient({
+    debug: {
+      allowUnsecure: true,
+      // log: true,
+      noStartTLS: true,
+    },
+    connection: {
+      hostname: "localhost",
+      port: 1025,
+      tls: false,
+    },
+  });
 
-//   await client.send({
-//     from: "me@denomailer.example",
-//     to: "you@denomailer.example",
-//     subject: "testing",
-//     content: "test",
-//   });
+  const content = await Deno.readFile("./attachments/image.png");
 
-//   await wait(2000);
+  await client.send({
+    from: "me@denomailer.example",
+    to: "you@denomailer.example",
+    subject: "testing",
+    content: "test",
+    attachments: [
+      {
+        content,
+        filename: "text.txt",
+        encoding: "binary",
+        contentType: "image/png",
+      },
+    ],
+  });
 
-//   const mails = await getEmails();
-//   assertEquals(mails.length, 1);
-//   await client.close();
-// });
+  await wait(2000);
+
+  const mails = await getEmails();
+  const data = new Uint8Array(mails[0].attachments[0].content.data);
+  assertEquals(data, content);
+  await client.close();
+});
 
 // Deno.test("test subject", async () => {
 //   await clearEmails();
