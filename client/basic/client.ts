@@ -183,14 +183,15 @@ export class SMTPClient {
         },
       );
 
-      const dec = new TextDecoder();
+      // const dec = new TextDecoder();
 
       config.attachments.map((v) => {
-        if (v.encoding === "text") return v.content;
+        return v.content;
+        // if (v.encoding === "text") return v.content;
 
-        const arr = new Uint8Array(v.content);
+        // const arr = new Uint8Array(v.content);
 
-        return dec.decode(arr);
+        // return dec.decode(arr);
       }).join("\n").replace(
         new RegExp("--attachment([0-9]+)", "g"),
         (_, numb) => {
@@ -260,27 +261,43 @@ export class SMTPClient {
 
         await this.#connection.writeCmd(
           "Content-Disposition: attachment; filename=" + attachment.filename,
-          "\r\n",
         );
 
-        if (attachment.encoding === "binary") {
-          await this.#connection.writeCmd("Content-Transfer-Encoding: binary");
+        if (attachment.encoding === "base64") {
+          await this.#connection.writeCmd(
+            "Content-Transfer-Encoding: base64",
+            "\r\n",
+          );
 
-          if (
-            attachment.content instanceof ArrayBuffer ||
-            attachment.content instanceof SharedArrayBuffer
+          for (
+            let line = 0;
+            line < Math.ceil(attachment.content.length / 75);
+            line++
           ) {
-            await this.#connection.writeCmdBinary(
-              new Uint8Array(attachment.content),
+            const lineOfBase64 = attachment.content.slice(
+              line * 75,
+              (line + 1) * 75,
             );
-          } else {
-            await this.#connection.writeCmdBinary(attachment.content);
+
+            await this.#connection.writeCmd(lineOfBase64);
           }
+
+          // if (
+          //   attachment.content instanceof ArrayBuffer ||
+          //   attachment.content instanceof SharedArrayBuffer
+          // ) {
+          //   await this.#connection.writeCmdBinary(
+          //     new Uint8Array(attachment.content),
+          //   );
+          // } else {
+          //   await this.#connection.writeCmdBinary(attachment.content);
+          // }
 
           await this.#connection.writeCmd("\r\n");
         } else if (attachment.encoding === "text") {
           await this.#connection.writeCmd(
             "Content-Transfer-Encoding: quoted-printable",
+            "\r\n",
           );
 
           await this.#connection.writeCmd(attachment.content, "\r\n");
