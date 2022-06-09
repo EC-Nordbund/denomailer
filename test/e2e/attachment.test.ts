@@ -22,7 +22,7 @@ Deno.test("test text attachment", async () => {
     },
   });
 
-  const content = "Hello\nWorld";
+  const content = "A\r\nHello\nWorld\rjmjkjj";
 
   await client.send({
     from: "me@denomailer.example",
@@ -43,7 +43,7 @@ Deno.test("test text attachment", async () => {
 
   const mails = await getEmails();
   const data = new Uint8Array(mails[0].attachments[0].content.data);
-  assertEquals(new TextDecoder().decode(data), content);
+  assertEquals(new TextDecoder().decode(data).trim(), content);
   await client.close();
 });
 
