@@ -1,4 +1,4 @@
-export { base64Decode } from "../../deps.ts";
+export { base64Decode, base64Encode } from "../../deps.ts";
 
 const encoder = new TextEncoder();
 

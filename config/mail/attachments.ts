@@ -1,4 +1,4 @@
-import { base64Decode } from "./encoding.ts";
+import { base64Encode } from "./encoding.ts";
 
 interface baseAttachment {
   contentType: string;
@@ -16,7 +16,7 @@ export type Attachment =
 export type ResolvedAttachment =
   & (
     | textAttachment
-    | arrayBufferLikeAttachment
+    | base64Attachment
   )
   & baseAttachment;
 
@@ -28,12 +28,12 @@ type arrayBufferLikeAttachment = {
 };
 
 export function resolveAttachment(attachment: Attachment): ResolvedAttachment {
-  if (attachment.encoding === "base64") {
+  if (attachment.encoding === "binary") {
     return {
       filename: attachment.filename,
       contentType: attachment.contentType,
-      encoding: "binary",
-      content: base64Decode(attachment.content),
+      encoding: "base64",
+      content: base64Encode(attachment.content),
     };
   } else {
     return attachment;
