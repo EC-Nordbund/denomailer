@@ -109,13 +109,29 @@ export class SMTPConnection {
     await this.#writer.flush();
   }
 
+  public async writeBDAT(...data: string[]) {
+    await this.writeBinaryBDAT(encoder.encode(data.join(" ") + "\r\n"));
+    await this.readCmd();
+  }
+
+  public async writeBinaryBDAT(...data: Uint8Array[]) {
+    for (let i = 0; i < data.length; i++) {
+      await this.writeCmd("BDAT", data[i].length.toString());
+      await this.writeCmdBinary(data[i]);
+    }
+  }
+
+  public async endBDAT() {
+    await this.writeCmd("BDAT", "0", "LAST");
+  }
+
   public async writeCmdBinary(...args: Uint8Array[]) {
     if (!this.#writer) {
       return null;
     }
 
     if (this.config.debug.log) {
-      console.table(args.map(() => "Uint8Attay"));
+      console.table(args.map(() => "Uint8Array"));
     }
 
     for (let i = 0; i < args.length; i++) {

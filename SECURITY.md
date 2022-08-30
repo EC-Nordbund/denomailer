@@ -5,7 +5,7 @@
 We provide security updates currently for these version.
 
 | Version | Supported          |
-| ------- | -------------------|
+| ------- | ------------------ |
 | 1.x     | :white_check_mark: |
 | 0.x     | :x:                |
 

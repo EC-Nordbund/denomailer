@@ -117,59 +117,70 @@ export class SMTPClient {
         );
       }
 
-      await this.#connection.writeCmd("DATA");
-      this.#connection.assertCode(
-        await this.#connection.readCmd(),
-        CommandCode.BEGIN_DATA,
-      );
+      const USE_CHUNKING = this.#supportedFeatures.has("CHUNKING");
 
-      await this.#connection.writeCmd("Subject: ", config.subject);
-      await this.#connection.writeCmd(
+      const writeCMD = USE_CHUNKING
+        ? this.#connection.writeBDAT.bind(this.#connection)
+        : this.#connection.writeCmd;
+      // const writeBIN = USE_CHUNKING
+      //   ? this.#connection.writeBinaryBDAT.bind(this.#connection)
+      //   : this.#connection.writeCmdBinary;
+
+      if (!USE_CHUNKING) {
+        await writeCMD("DATA");
+        this.#connection.assertCode(
+          await this.#connection.readCmd(),
+          CommandCode.BEGIN_DATA,
+        );
+      }
+
+      await writeCMD("Subject: ", config.subject);
+      await writeCMD(
         "From: ",
         `${config.from.name} <${config.from.mail}>`,
       );
       if (config.to.length > 0) {
-        await this.#connection.writeCmd(
+        await writeCMD(
           "To: ",
           config.to.map((m) => `${m.name} <${m.mail}>`).join(";"),
         );
       }
       if (config.cc.length > 0) {
-        await this.#connection.writeCmd(
+        await writeCMD(
           "Cc: ",
           config.cc.map((m) => `${m.name} <${m.mail}>`).join(";"),
         );
       }
 
-      await this.#connection.writeCmd("Date: ", config.date);
+      await writeCMD("Date: ", config.date);
 
       const obj = Object.entries(config.headers);
 
       for (let i = 0; i < obj.length; i++) {
         const [name, value] = obj[i];
-        await this.#connection.writeCmd(name + ": ", value);
+        await writeCMD(name + ": ", value);
       }
 
       if (config.inReplyTo) {
-        await this.#connection.writeCmd("InReplyTo: ", config.inReplyTo);
+        await writeCMD("InReplyTo: ", config.inReplyTo);
       }
 
       if (config.references) {
-        await this.#connection.writeCmd("Refrences: ", config.references);
+        await writeCMD("Refrences: ", config.references);
       }
 
       if (config.replyTo) {
-        await this.#connection.writeCmd(
+        await writeCMD(
           "ReplyTo: ",
           `${config.replyTo.name} <${config.replyTo.name}>`,
         );
       }
 
       if (config.priority) {
-        await this.#connection.writeCmd("Priority:", config.priority);
+        await writeCMD("Priority:", config.priority);
       }
 
-      await this.#connection.writeCmd("MIME-Version: 1.0");
+      await writeCMD("MIME-Version: 1.0");
 
       let boundaryAdditionAtt = 100;
       // calc msg boundary
@@ -203,11 +214,11 @@ export class SMTPClient {
 
       const attachmentBoundary = `attachment${boundaryAdditionAtt}`;
 
-      await this.#connection.writeCmd(
+      await writeCMD(
         `Content-Type: multipart/mixed; boundary=${attachmentBoundary}`,
         "\r\n",
       );
-      await this.#connection.writeCmd(`--${attachmentBoundary}`);
+      await writeCMD(`--${attachmentBoundary}`);
 
       let boundaryAddition = 100;
       // calc msg boundary
@@ -223,54 +234,54 @@ export class SMTPClient {
 
       const messageBoundary = `message${boundaryAddition}`;
 
-      await this.#connection.writeCmd(
+      await writeCMD(
         `Content-Type: multipart/alternative; boundary=${messageBoundary}`,
         "\r\n",
       );
 
       for (let i = 0; i < config.mimeContent.length; i++) {
-        await this.#connection.writeCmd(`--${messageBoundary}`);
-        await this.#connection.writeCmd(
+        await writeCMD(`--${messageBoundary}`);
+        await writeCMD(
           "Content-Type: " + config.mimeContent[i].mimeType,
         );
         if (config.mimeContent[i].transferEncoding) {
-          await this.#connection.writeCmd(
+          await writeCMD(
             `Content-Transfer-Encoding: ${
               config.mimeContent[i].transferEncoding
             }` + "\r\n",
           );
         } else {
           // Send new line
-          await this.#connection.writeCmd("");
+          await writeCMD("");
         }
 
-        await this.#connection.writeCmd(config.mimeContent[i].content, "\r\n");
+        await writeCMD(config.mimeContent[i].content, "\r\n");
       }
 
-      await this.#connection.writeCmd(`--${messageBoundary}--\r\n`);
+      await writeCMD(`--${messageBoundary}--\r\n`);
 
       for (let i = 0; i < config.attachments.length; i++) {
         const attachment = config.attachments[i];
 
-        await this.#connection.writeCmd(`--${attachmentBoundary}`);
-        await this.#connection.writeCmd(
+        await writeCMD(`--${attachmentBoundary}`);
+        await writeCMD(
           "Content-Type:",
           attachment.contentType + ";",
           "name=" + attachment.filename,
         );
 
         if (attachment.contentID) {
-          await this.#connection.writeCmd(
+          await writeCMD(
             `Content-ID: <${attachment.contentID}>`,
           );
         }
 
-        await this.#connection.writeCmd(
+        await writeCMD(
           "Content-Disposition: attachment; filename=" + attachment.filename,
         );
 
         if (attachment.encoding === "base64") {
-          await this.#connection.writeCmd(
+          await writeCMD(
             "Content-Transfer-Encoding: base64",
             "\r\n",
           );
@@ -285,7 +296,7 @@ export class SMTPClient {
               (line + 1) * 75,
             );
 
-            await this.#connection.writeCmd(lineOfBase64);
+            await writeCMD(lineOfBase64);
           }
 
           // if (
@@ -299,25 +310,26 @@ export class SMTPClient {
           //   await this.#connection.writeCmdBinary(attachment.content);
           // }
 
-          await this.#connection.writeCmd("\r\n");
+          await writeCMD("\r\n");
         } else if (attachment.encoding === "text") {
-          await this.#connection.writeCmd(
+          await writeCMD(
             "Content-Transfer-Encoding: quoted-printable",
             "\r\n",
           );
 
-          await this.#connection.writeCmd(attachment.content, "\r\n");
+          await writeCMD(attachment.content, "\r\n");
         }
       }
 
-      await this.#connection.writeCmd(`--${attachmentBoundary}--\r\n`);
+      await writeCMD(`--${attachmentBoundary}--\r\n`);
 
-      await this.#connection.writeCmd(".\r\n");
-
-      this.#connection.assertCode(
-        await this.#connection.readCmd(),
-        CommandCode.OK,
-      );
+      if (USE_CHUNKING) {
+        await writeCMD(".\r\n");
+        this.#connection.assertCode(
+          await this.#connection.readCmd(),
+          CommandCode.OK,
+        );
+      }
       await this.#cleanup();
       this.#que.next();
     } catch (ex) {
