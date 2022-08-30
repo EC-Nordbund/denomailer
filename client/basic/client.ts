@@ -121,7 +121,7 @@ export class SMTPClient {
 
       const writeCMD = USE_CHUNKING
         ? this.#connection.writeBDAT.bind(this.#connection)
-        : this.#connection.writeCmd;
+        : this.#connection.writeCmd.bind(this.#connection);
       // const writeBIN = USE_CHUNKING
       //   ? this.#connection.writeBinaryBDAT.bind(this.#connection)
       //   : this.#connection.writeCmdBinary;
