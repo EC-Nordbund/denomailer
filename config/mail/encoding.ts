@@ -68,3 +68,16 @@ export function quotedPrintableEncode(data: string, encLB = false) {
 
   return ret;
 }
+
+function hasNonAsciiCharacters(str: string) {
+  // deno-lint-ignore no-control-regex
+  return /[^\u0000-\u007f]/.test(str)
+}
+
+export function quotedPrintableEncodeInline(data: string) {
+  if(hasNonAsciiCharacters(data)) {
+    return `=?utf-8?Q?${quotedPrintableEncode(data)}?=`
+  }
+
+  return data
+}
