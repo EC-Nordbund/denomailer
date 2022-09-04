@@ -14,6 +14,7 @@ import {
 } from "./email.ts";
 import { ResolvedClientOptions } from "../client.ts";
 import { Headers, validateHeaders } from "./headers.ts";
+import { quotedPrintableEncodeInline } from "./encoding.ts";
 /**
  * Config for a mail
  */
@@ -90,7 +91,7 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     }),
     replyTo: replyTo ? parseSingleEmail(replyTo) : undefined,
     inReplyTo,
-    subject,
+    subject: quotedPrintableEncodeInline(subject),
     attachments: attachments
       ? attachments.map((attachment) => resolveAttachment(attachment))
       : [],

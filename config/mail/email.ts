@@ -1,3 +1,5 @@
+import { quotedPrintableEncodeInline } from "./encoding.ts";
+
 export interface mailObject {
   mail: string;
   name?: string;
@@ -23,7 +25,7 @@ export function parseSingleEmail(mail: singleMail): saveMailObject {
   if (typeof mail !== "string") {
     return {
       mail: mail.mail,
-      name: mail.name ?? "",
+      name: quotedPrintableEncodeInline(mail.name ?? ""),
     };
   }
 
@@ -41,7 +43,7 @@ export function parseSingleEmail(mail: singleMail): saveMailObject {
   const [_, name, email] = res;
 
   return {
-    name: name.trim(),
+    name: quotedPrintableEncodeInline(name.trim()),
     mail: email.trim(),
   };
 }
@@ -53,12 +55,12 @@ export function parseMailList(list: mailList): saveMailObject[] {
   if ("mail" in list) {
     return [{
       mail: list.mail,
-      name: list.name ?? "",
+      name: quotedPrintableEncodeInline(list.name ?? ""),
     }];
   }
 
   return Object.entries(list as mailListObject).map(([name, mail]) => ({
-    name,
+    name: quotedPrintableEncodeInline(name),
     mail,
   }));
 }

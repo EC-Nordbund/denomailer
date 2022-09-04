@@ -4,10 +4,10 @@
 
 We provide security updates currently for these version.
 
-| Version | Supported                           |
-| ------- | ----------------------------------- |
-| 1.x     | :white_check_mark:                  |
-| 0.x     | :white_check_mark: (until 31.07.21) |
+| Version | Supported          |
+| ------- | ------------------ |
+| 1.x     | :white_check_mark: |
+| 0.x     | :x:                |
 
 We will provide security updates after 1.0 only for the latest version of that
 major. We will deprecate major versions so you should always upgrade! Note that
