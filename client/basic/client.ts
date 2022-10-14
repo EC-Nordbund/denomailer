@@ -72,6 +72,7 @@ export class SMTPClient {
 
   async send(config: ResolvedSendConfig) {
     await this.#ready;
+    let dataMode = false;
     try {
       await this.#que.que();
 
@@ -117,6 +118,7 @@ export class SMTPClient {
         );
       }
 
+      dataMode = true;
       await this.#connection.writeCmd("DATA");
       this.#connection.assertCode(
         await this.#connection.readCmd(),
@@ -318,9 +320,17 @@ export class SMTPClient {
         await this.#connection.readCmd(),
         CommandCode.OK,
       );
+      dataMode = false;
       await this.#cleanup();
       this.#que.next();
     } catch (ex) {
+      if (dataMode) {
+        console.error("Error while in datamode - connection not revoverable");
+        queueMicrotask(() => {
+          this.#connection.conn?.close();
+        });
+        throw ex;
+      }
       await this.#cleanup();
       this.#que.next();
       throw ex;

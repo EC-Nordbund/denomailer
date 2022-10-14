@@ -1,4 +1,5 @@
-# Denomailer - an SMTP client for Deno 
+# Denomailer - an SMTP client for Deno
+
 [![deno module](https://shield.deno.dev/x/denomailer)](https://deno.land/x/denomailer)
 
 > This was forked from https://github.com/manyuanrong/deno-smtp but now is much

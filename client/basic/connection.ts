@@ -77,8 +77,9 @@ export class SMTPConnection {
     }
 
     const nonNullResult: string[] =
-      (result.at(-1) === null ? result.slice(0, result.length - 1) : // deno-lint-ignore no-explicit-any
-        result) as any;
+      (result.at(-1) === null
+        ? result.slice(0, result.length - 1) // deno-lint-ignore no-explicit-any
+        : result) as any;
 
     if (nonNullResult.length === 0) return null;
 
