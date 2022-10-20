@@ -32,8 +32,10 @@ export class SMTPConnection {
       return;
     }
     this.conn.close();
-    this.#reader?.cancel();
-    this.#readerStream?.cancel()
+    await this.#reader?.cancel();
+    await this.#readerStream?.cancel()
+    // this.#lineStream.readable.cancel()
+    // this.#decoder.readable.cancel()
     // this.#lineStream.readable.cancel()
     // this.
   }
