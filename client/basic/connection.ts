@@ -29,7 +29,8 @@ export class SMTPConnection {
     if (!this.conn) {
       return;
     }
-    await this.conn.close();
+    this.conn.close();
+    this.#reader?.releaseLock()
     await this.#readerStream?.cancel()
   }
 
