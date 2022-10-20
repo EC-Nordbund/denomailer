@@ -8,6 +8,8 @@ interface Command {
   args: string | (string[]);
 }
 
+const sleep = (to: number) => new Promise((res) => setTimeout(res, to))
+
 export class SMTPConnection {
   secure = false;
 
@@ -31,6 +33,7 @@ export class SMTPConnection {
     }
     this.conn.close();
     this.#reader?.cancel();
+    await sleep(5000)
     // await this.#readerStream?.cancel();
   }
 
