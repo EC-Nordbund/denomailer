@@ -14,6 +14,8 @@ export class SMTPConnection {
   conn: Deno.Conn | null = null;
   #reader: ReadableStreamDefaultReader<string> | null = null;
   #writer: BufWriter | null = null;
+  #decoder = new TextDecoderStream();
+  #lineStream = new TextLineStream();
 
   constructor(private config: ResolvedClientOptions) {
     this.ready = this.#connect();
@@ -27,15 +29,15 @@ export class SMTPConnection {
       return;
     }
     await this.conn.close();
-    await this.#reader!.cancel()
+    await this.#decoder?.readable.cancel();
   }
 
   setupConnection(conn: Deno.Conn) {
     this.conn = conn;
     this.#writer = new BufWriter(this.conn);
     this.#reader = this.conn.readable
-      .pipeThrough(new TextDecoderStream())
-      .pipeThrough(new TextLineStream())
+      .pipeThrough(this.#decoder)
+      .pipeThrough(this.#lineStream)
       .getReader();
   }
 
