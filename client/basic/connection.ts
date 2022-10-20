@@ -1,4 +1,4 @@
-import { BufReader, BufWriter, TextProtoReader } from "../../deps.ts";
+import { BufWriter, TextLineStream } from "../../deps.ts";
 import { ResolvedClientOptions } from "../../config/client.ts";
 
 const encoder = new TextEncoder();
@@ -12,7 +12,7 @@ export class SMTPConnection {
   secure = false;
 
   conn: Deno.Conn | null = null;
-  #reader: TextProtoReader | null = null;
+  #reader: ReadableStreamDefaultReader<string> | null = null;
   #writer: BufWriter | null = null;
 
   constructor(private config: ResolvedClientOptions) {
@@ -31,10 +31,11 @@ export class SMTPConnection {
 
   setupConnection(conn: Deno.Conn) {
     this.conn = conn;
-
-    const reader = new BufReader(this.conn);
     this.#writer = new BufWriter(this.conn);
-    this.#reader = new TextProtoReader(reader);
+    this.#reader = this.conn.readable
+      .pipeThrough(new TextDecoderStream())
+      .pipeThrough(new TextLineStream())
+      .getReader();
   }
 
   async #connect() {
@@ -73,7 +74,7 @@ export class SMTPConnection {
     while (
       result.length === 0 || (result.at(-1) && result.at(-1)!.at(3) === "-")
     ) {
-      result.push(await this.#reader.readLine());
+      result.push((await this.#reader.read()).value ?? null);
     }
 
     const nonNullResult: string[] =
