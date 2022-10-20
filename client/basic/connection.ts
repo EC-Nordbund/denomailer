@@ -33,10 +33,12 @@ export class SMTPConnection {
     }
     this.conn.close();
     this.#reader?.cancel();
-    await sleep(5000)
-    // await this.#readerStream?.cancel();
+    this.#readerStream?.cancel()
+    // this.#lineStream.readable.cancel()
+    // this.
   }
 
+  // Needed for starttls to inject a new connection
   setupConnection(conn: Deno.Conn) {
     this.conn = conn;
     this.#writer = new BufWriter(this.conn);
