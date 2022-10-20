@@ -29,7 +29,8 @@ export class SMTPConnection {
       return;
     }
     await this.conn.close();
-    await this.#reader?.releaseLock()
+    await this.#reader!.releaseLock()
+    await this.#decoder.readable.cancel()
   }
 
   setupConnection(conn: Deno.Conn) {
