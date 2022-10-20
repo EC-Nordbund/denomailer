@@ -27,27 +27,3 @@ jobs:
           branch: deno-dependency-updates
           author: GitHub <noreply@github.com>
           delete-branch: true
-      - name: Retrieve commit sha
-        id: commit
-        run: |
-          echo "::set-output name=sha::$(git rev-parse HEAD)"
-      - name: Set commit status with pending
-        uses: Sibz/github-status-action@v1
-        with:
-          authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "Basic tests"
-          state: "pending"
-          sha: ${{ steps.commit.outputs.sha }}
-      - name: Basic tests
-        id: test
-        continue-on-error: true
-        run: |
-          deno test --allow-read --allow-write
-      - name: Set commit status with outcome
-        uses: Sibz/github-status-action@v1
-        with:
-          authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "Basic tests"
-          description: "To run other CI actions close/reopen this PR"
-          state: ${{ steps.test.outcome }}
-          sha: ${{ steps.commit.outputs.sha }}
