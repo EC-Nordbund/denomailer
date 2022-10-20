@@ -30,8 +30,9 @@ export class SMTPConnection {
       return;
     }
     this.conn.close();
-    this.#reader?.releaseLock()
-    await this.#readerStream?.cancel()
+    this.#reader?.releaseLock();
+    await this.#readerStream?.cancel();
+    await this.#decoder.readable.cancel();
   }
 
   setupConnection(conn: Deno.Conn) {
@@ -39,8 +40,8 @@ export class SMTPConnection {
     this.#writer = new BufWriter(this.conn);
     this.#readerStream = this.conn.readable
       .pipeThrough(this.#decoder)
-      .pipeThrough(this.#lineStream)
-    this.#reader = this.#readerStream.getReader()
+      .pipeThrough(this.#lineStream);
+    this.#reader = this.#readerStream.getReader();
   }
 
   async #connect() {
