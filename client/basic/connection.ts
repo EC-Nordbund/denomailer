@@ -27,6 +27,7 @@ export class SMTPConnection {
       return;
     }
     await this.conn.close();
+    await this.#reader!.cancel()
   }
 
   setupConnection(conn: Deno.Conn) {
