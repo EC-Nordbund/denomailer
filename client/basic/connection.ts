@@ -8,8 +8,6 @@ interface Command {
   args: string | (string[]);
 }
 
-const sleep = (to: number) => new Promise((res) => setTimeout(res, to))
-
 export class SMTPConnection {
   secure = false;
 
