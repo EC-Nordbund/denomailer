@@ -36,7 +36,7 @@ export class SMTPConnection {
     this.#reader?.releaseLock()
     await this.#readerStream?.cancel()
     // this.#lineStream.readable.cancel()
-    // this.#decoder.readable.cancel()
+    await this.#decoder.readable.cancel()
     // this.#lineStream.readable.cancel()
     // this.
   }
