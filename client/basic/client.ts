@@ -1,6 +1,7 @@
 import type { ResolvedSendConfig } from "../../config/mail/mod.ts";
 import { ResolvedClientOptions } from "../../config/client.ts";
-import { SMTPConnection } from "./connection.ts";
+import { SMTPConnection } from "./connection2.ts";
+import { QUE } from "./QUE.ts";
 
 const CommandCode = {
   READY: 220,
@@ -9,38 +10,6 @@ const CommandCode = {
   BEGIN_DATA: 354,
   FAIL: 554,
 };
-
-class QUE {
-  running = false;
-  #que: (() => void)[] = [];
-  idle: Promise<void> = Promise.resolve();
-  #idbleCB?: () => void;
-
-  que(): Promise<void> {
-    if (!this.running) {
-      this.running = true;
-      this.idle = new Promise((res) => {
-        this.#idbleCB = res;
-      });
-      return Promise.resolve();
-    }
-
-    return new Promise<void>((res) => {
-      this.#que.push(res);
-    });
-  }
-
-  next() {
-    if (this.#que.length === 0) {
-      this.running = false;
-      if (this.#idbleCB) this.#idbleCB();
-      return;
-    }
-
-    this.#que[0]();
-    this.#que.splice(0, 1);
-  }
-}
 
 export class SMTPClient {
   #connection: SMTPConnection;

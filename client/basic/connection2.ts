@@ -1,25 +1,17 @@
-import { BufWriter, TextLineStream } from "../../deps.ts";
 import { ResolvedClientOptions } from "../../config/client.ts";
-
-const encoder = new TextEncoder();
+import { WrapedConn } from "./stringConn.ts";
 
 interface Command {
   code: number;
   args: string | (string[]);
 }
 
-
-
-
 export class SMTPConnection {
   secure = false;
 
+  #wrapedConnection!: WrapedConn
+
   conn: Deno.Conn | null = null;
-  #reader: ReadableStreamDefaultReader<string> | null = null;
-  #writer: BufWriter | null = null;
-  #decoder = new TextDecoderStream();
-  #lineStream = new TextLineStream();
-  #readerStream: ReadableStream<string> | null = null;
 
   constructor(private config: ResolvedClientOptions) {
     this.ready = this.#connect();
@@ -29,39 +21,12 @@ export class SMTPConnection {
 
   async close() {
     await this.ready;
-    if (!this.conn) {
-      return;
-    }
-    this.#reader?.releaseLock()
-    await this.conn.writable.close()
-    // await this.conn.readable.cancel()
-    // await this.#reader?.cancel();
-    // await this.conn.closeWrite()
-    // this.#reader?.releaseLock()
-    // await this.#readerStream?.cancel()
-    // await this.#reader?.cancel();
-    // await this.conn.readable.cancel()
-    // this.conn.close()
-    
-    // await this.#writer.
-    // this.conn.close();
-    
-    // this.#reader?.releaseLock()
-    // await this.#decoder.readable.cancel()
-    // await this.#readerStream?.cancel()
-    // this.#lineStream.readable.cancel()
-    // this.#lineStream.readable.cancel()
-    // this.
+    await this.#wrapedConnection.close()
   }
 
   // Needed for starttls to inject a new connection
   setupConnection(conn: Deno.Conn) {
-    this.conn = conn;
-    this.#writer = new BufWriter(this.conn);
-    this.#readerStream = this.conn.readable
-      .pipeThrough(this.#decoder)
-      .pipeThrough(this.#lineStream);
-    this.#reader = this.#readerStream.getReader();
+    this.#wrapedConnection = new WrapedConn(conn)
   }
 
   async #connect() {
@@ -91,16 +56,12 @@ export class SMTPConnection {
   }
 
   public async readCmd(): Promise<Command | null> {
-    if (!this.#reader) {
-      return null;
-    }
-
     const result: (string | null)[] = [];
 
     while (
       result.length === 0 || (result.at(-1) && result.at(-1)!.at(3) === "-")
     ) {
-      result.push((await this.#reader.read()).value ?? null);
+      result.push(await this.#wrapedConnection.readLine());
     }
 
     const nonNullResult: string[] =
@@ -123,32 +84,19 @@ export class SMTPConnection {
     };
   }
 
-  public async writeCmd(...args: string[]) {
-    if (!this.#writer) {
-      return null;
-    }
-
+  public writeCmd(...args: string[]) {
     if (this.config.debug.log) {
       console.table(args);
     }
 
-    const data = encoder.encode([...args].join(" ") + "\r\n");
-    await this.#writer.write(data);
-    await this.#writer.flush();
+    return this.#wrapedConnection.write([args.join(" ") + '\r\n'])
   }
 
-  public async writeCmdBinary(...args: Uint8Array[]) {
-    if (!this.#writer) {
-      return null;
-    }
-
+  public writeCmdBinary(...args: Uint8Array[]) {
     if (this.config.debug.log) {
-      console.table(args.map(() => "Uint8Attay"));
+      console.table(args.map(() => "Uint8Array"));
     }
 
-    for (let i = 0; i < args.length; i++) {
-      await this.#writer.write(args[i]);
-    }
-    await this.#writer.flush();
+    return this.#wrapedConnection.write(args)
   }
 }
