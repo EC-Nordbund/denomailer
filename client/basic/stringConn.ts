@@ -1,7 +1,7 @@
 import { TextLineStream } from "../../deps.ts";
 import { QUE } from "./QUE.ts";
 
-class TextDecoderOrIntArrayStream {
+class TextEncoderOrIntArrayStream {
   #encoder = new TextEncoder()
 
   #transform = new TransformStream<string | Uint8Array, Uint8Array>({
@@ -25,7 +25,7 @@ class TextDecoderOrIntArrayStream {
 
 
 export class WrapedConn {
-  #outTransform = new TextDecoderOrIntArrayStream()
+  #outTransform = new TextEncoderOrIntArrayStream()
   #decoder = new TextDecoderStream();
   #lineStream = new TextLineStream();
   
@@ -60,14 +60,9 @@ export class WrapedConn {
     this.#que.next()
   }
 
-  async close() {
+  close() {
     this.#reader.releaseLock()
-    await this.#readableStream.cancel()
-    await this.#lineStream.readable.cancel()
-    await this.#decoder.readable.cancel()
-    await this.#decoder.writable.getWriter().write('')
-
-    // await this.conn.readable.cancel()
-    // await this.conn.writable.close()
+    // await this.#reader.cancel()
+    this.conn.close()
   }
 }
