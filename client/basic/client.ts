@@ -286,8 +286,8 @@ export class SMTPClient {
       this.#connection.writeCmd(`--${attachmentBoundary}--\r\n`);
 
       // Wait for all writes to finish
-      await this.#connection.writeCmdAndAssert(CommandCode.OK, ".\r\n")
-      
+      await this.#connection.writeCmdAndAssert(CommandCode.OK, ".\r\n");
+
       dataMode = false;
       await this.#cleanup();
       this.#que.next();
