@@ -19,6 +19,7 @@ export class TextEncoderOrIntArrayStream implements TransformStream {
     return this.#transform.writable;
   }
 }
+
 export class TextLineStream {
   #buf = "";
   #transform = new TransformStream<string, string>({
@@ -46,6 +47,7 @@ export class TextLineStream {
     this.#buf = chunks.at(-1) ?? "";
   }
 }
+
 export class TextDecoderStream implements TransformStream {
   #decoder: TextDecoder;
   #transform: TransformStream<BufferSource, string>;

@@ -348,7 +348,7 @@ export class SMTPClient {
         CommandCode.READY,
       );
 
-      const conn = await Deno.startTls(this.#connection.conn!, {
+      const conn = await Deno.startTls(this.#connection.conn, {
         hostname: this.config.connection.hostname,
       });
       this.#connection = new SMTPConnection(conn, this.config);
