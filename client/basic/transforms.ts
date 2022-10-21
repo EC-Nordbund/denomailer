@@ -20,7 +20,7 @@ export class TextEncoderOrIntArrayStream implements TransformStream {
   }
 }
 
-export class TextLineStream {
+export class TextLineStream implements TransformStream {
   #buf = "";
   #transform = new TransformStream<string, string>({
     transform: (chunk, controller) => this.#handle(chunk, controller),
