@@ -5,7 +5,7 @@ export class QUE {
   #idbleCB?: () => void;
 
   que(): Promise<void> {
-    if(!this.running) {
+    if (!this.running) {
       this.running = true;
       this.idle = new Promise((res) => {
         this.#idbleCB = res;
@@ -19,10 +19,11 @@ export class QUE {
   }
 
   next() {
-    if(this.#que.length === 0) {
+    if (this.#que.length === 0) {
       this.running = false;
-      if(this.#idbleCB)
+      if (this.#idbleCB) {
         this.#idbleCB();
+      }
       return;
     }
 

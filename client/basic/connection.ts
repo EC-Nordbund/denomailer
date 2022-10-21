@@ -9,7 +9,7 @@ interface Command {
 export class SMTPConnection {
   secure = false;
 
-  #wrapedConnection!: WrapedConn
+  #wrapedConnection!: WrapedConn;
 
   conn: Deno.Conn | null = null;
 
@@ -21,12 +21,12 @@ export class SMTPConnection {
 
   async close() {
     await this.ready;
-    await this.#wrapedConnection.close()
+    await this.#wrapedConnection.close();
   }
 
   // Needed for starttls to inject a new connection
   setupConnection(conn: Deno.Conn) {
-    this.#wrapedConnection = new WrapedConn(conn)
+    this.#wrapedConnection = new WrapedConn(conn);
   }
 
   async #connect() {
@@ -64,7 +64,7 @@ export class SMTPConnection {
       result.push(await this.#wrapedConnection.readLine());
     }
 
-    const nonNullResult = result.filter((v): v is string=>v!==null)
+    const nonNullResult = result.filter((v): v is string => v !== null);
 
     if (nonNullResult.length === 0) return null;
 
@@ -86,7 +86,7 @@ export class SMTPConnection {
       console.table(args);
     }
 
-    return this.#wrapedConnection.write([args.join(" ") + '\r\n'])
+    return this.#wrapedConnection.write([args.join(" ") + "\r\n"]);
   }
 
   public writeCmdBinary(...args: Uint8Array[]) {
@@ -94,6 +94,6 @@ export class SMTPConnection {
       console.table(args.map(() => "Uint8Array"));
     }
 
-    return this.#wrapedConnection.write(args)
+    return this.#wrapedConnection.write(args);
   }
 }
