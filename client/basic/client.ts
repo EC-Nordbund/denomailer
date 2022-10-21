@@ -59,45 +59,37 @@ export class SMTPClient {
     try {
       await this.#que.que();
 
-      await this.#connection.writeCmd("MAIL", "FROM:", `<${config.from.mail}>`);
-      this.#connection.assertCode(
-        await this.#connection.readCmd(),
+      await this.#connection.writeCmdAndAssert(
         CommandCode.OK,
+        "MAIL",
+        "FROM:",
+        `<${config.from.mail}>`,
       );
 
       for (let i = 0; i < config.to.length; i++) {
-        await this.#connection.writeCmd(
+        await this.#connection.writeCmdAndAssert(
+          CommandCode.OK,
           "RCPT",
           "TO:",
           `<${config.to[i].mail}>`,
         );
-        this.#connection.assertCode(
-          await this.#connection.readCmd(),
-          CommandCode.OK,
-        );
       }
 
       for (let i = 0; i < config.cc.length; i++) {
-        await this.#connection.writeCmd(
+        await this.#connection.writeCmdAndAssert(
+          CommandCode.OK,
           "RCPT",
           "TO:",
           `<${config.cc[i].mail}>`,
         );
-        this.#connection.assertCode(
-          await this.#connection.readCmd(),
-          CommandCode.OK,
-        );
       }
 
       for (let i = 0; i < config.bcc.length; i++) {
-        await this.#connection.writeCmd(
+        await this.#connection.writeCmdAndAssert(
+          CommandCode.OK,
           "RCPT",
           "TO:",
           `<${config.bcc[i].mail}>`,
-        );
-        this.#connection.assertCode(
-          await this.#connection.readCmd(),
-          CommandCode.OK,
         );
       }
 
@@ -294,12 +286,8 @@ export class SMTPClient {
       this.#connection.writeCmd(`--${attachmentBoundary}--\r\n`);
 
       // Wait for all writes to finish
-      await this.#connection.writeCmd(".\r\n");
-
-      this.#connection.assertCode(
-        await this.#connection.readCmd(),
-        CommandCode.OK,
-      );
+      await this.#connection.writeCmdAndAssert(CommandCode.OK, ".\r\n")
+      
       dataMode = false;
       await this.#cleanup();
       this.#que.next();
