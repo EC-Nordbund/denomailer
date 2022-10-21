@@ -1,7 +1,11 @@
-import { BufReader, BufWriter, TextProtoReader } from "../../deps.ts";
 import { ResolvedClientOptions } from "../../config/client.ts";
 
-const encoder = new TextEncoder();
+import { QUE } from "./QUE.ts";
+import {
+  TextDecoderStream,
+  TextEncoderOrIntArrayStream,
+  TextLineStream,
+} from "./transforms.ts";
 
 interface Command {
   code: number;
@@ -9,49 +13,49 @@ interface Command {
 }
 
 export class SMTPConnection {
-  secure = false;
+  #outTransform = new TextEncoderOrIntArrayStream();
+  #decoder = new TextDecoderStream();
+  #lineStream = new TextLineStream();
 
-  conn: Deno.Conn | null = null;
-  #reader: TextProtoReader | null = null;
-  #writer: BufWriter | null = null;
+  #writableTransformStream = new TransformStream<
+    string | Uint8Array,
+    string | Uint8Array
+  >();
+  #readableStream: ReadableStream<string>;
+  #reader: ReadableStreamDefaultReader<string>;
+  #writer: WritableStreamDefaultWriter<string | Uint8Array>;
 
-  constructor(private config: ResolvedClientOptions) {
-    this.ready = this.#connect();
+  #que = new QUE();
+
+  constructor(public conn: Deno.Conn, private config: ResolvedClientOptions) {
+    this.#writableTransformStream.readable.pipeThrough(this.#outTransform)
+      .pipeTo(this.conn.writable);
+    this.#readableStream = this.conn.readable.pipeThrough(this.#decoder)
+      .pipeThrough(this.#lineStream);
+    this.#reader = this.#readableStream.getReader();
+    this.#writer = this.#writableTransformStream.writable.getWriter();
   }
 
-  ready: Promise<void>;
-
-  async close() {
-    await this.ready;
-    if (!this.conn) {
-      return;
-    }
-    await this.conn.close();
+  async readLine() {
+    const ret = await this.#reader.read();
+    return ret.value ?? null;
   }
 
-  setupConnection(conn: Deno.Conn) {
-    this.conn = conn;
+  async write(chunks: (string | Uint8Array)[]) {
+    if (chunks.length === 0) return;
 
-    const reader = new BufReader(this.conn);
-    this.#writer = new BufWriter(this.conn);
-    this.#reader = new TextProtoReader(reader);
-  }
+    await this.#que.que();
 
-  async #connect() {
-    if (this.config.connection.tls) {
-      this.conn = await Deno.connectTls({
-        hostname: this.config.connection.hostname,
-        port: this.config.connection.port,
-      });
-      this.secure = true;
-    } else {
-      this.conn = await Deno.connect({
-        hostname: this.config.connection.hostname,
-        port: this.config.connection.port,
-      });
+    for (const chunk of chunks) {
+      await this.#writer.write(chunk);
     }
 
-    this.setupConnection(this.conn);
+    this.#que.next();
+  }
+
+  close() {
+    this.conn.close();
+    this.#decoder.close();
   }
 
   public assertCode(cmd: Command | null, code: number, msg?: string) {
@@ -64,22 +68,15 @@ export class SMTPConnection {
   }
 
   public async readCmd(): Promise<Command | null> {
-    if (!this.#reader) {
-      return null;
-    }
-
     const result: (string | null)[] = [];
 
     while (
       result.length === 0 || (result.at(-1) && result.at(-1)!.at(3) === "-")
     ) {
-      result.push(await this.#reader.readLine());
+      result.push(await this.readLine());
     }
 
-    const nonNullResult: string[] =
-      (result.at(-1) === null
-        ? result.slice(0, result.length - 1) // deno-lint-ignore no-explicit-any
-        : result) as any;
+    const nonNullResult = result.filter((v): v is string => v !== null);
 
     if (nonNullResult.length === 0) return null;
 
@@ -96,32 +93,19 @@ export class SMTPConnection {
     };
   }
 
-  public async writeCmd(...args: string[]) {
-    if (!this.#writer) {
-      return null;
-    }
-
+  public writeCmd(...args: string[]) {
     if (this.config.debug.log) {
       console.table(args);
     }
 
-    const data = encoder.encode([...args].join(" ") + "\r\n");
-    await this.#writer.write(data);
-    await this.#writer.flush();
+    return this.write([args.join(" ") + "\r\n"]);
   }
 
-  public async writeCmdBinary(...args: Uint8Array[]) {
-    if (!this.#writer) {
-      return null;
-    }
-
+  public writeCmdBinary(...args: Uint8Array[]) {
     if (this.config.debug.log) {
-      console.table(args.map(() => "Uint8Attay"));
+      console.table(args.map(() => "Uint8Array"));
     }
 
-    for (let i = 0; i < args.length; i++) {
-      await this.#writer.write(args[i]);
-    }
-    await this.#writer.flush();
+    return this.write(args);
   }
 }

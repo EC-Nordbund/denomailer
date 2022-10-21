@@ -1,6 +1,7 @@
 import type { ResolvedSendConfig } from "../../config/mail/mod.ts";
 import { ResolvedClientOptions } from "../../config/client.ts";
 import { SMTPConnection } from "./connection.ts";
+import { QUE } from "./QUE.ts";
 
 const CommandCode = {
   READY: 220,
@@ -10,48 +11,29 @@ const CommandCode = {
   FAIL: 554,
 };
 
-class QUE {
-  running = false;
-  #que: (() => void)[] = [];
-  idle: Promise<void> = Promise.resolve();
-  #idbleCB?: () => void;
-
-  que(): Promise<void> {
-    if (!this.running) {
-      this.running = true;
-      this.idle = new Promise((res) => {
-        this.#idbleCB = res;
-      });
-      return Promise.resolve();
-    }
-
-    return new Promise<void>((res) => {
-      this.#que.push(res);
-    });
-  }
-
-  next() {
-    if (this.#que.length === 0) {
-      this.running = false;
-      if (this.#idbleCB) this.#idbleCB();
-      return;
-    }
-
-    this.#que[0]();
-    this.#que.splice(0, 1);
-  }
-}
-
 export class SMTPClient {
-  #connection: SMTPConnection;
+  secure = false;
+
+  #connection!: SMTPConnection;
   #que = new QUE();
 
   constructor(private config: ResolvedClientOptions) {
-    const c = new SMTPConnection(config);
-    this.#connection = c;
-
     this.#ready = (async () => {
-      await c.ready;
+      let conn: Deno.Conn;
+      if (this.config.connection.tls) {
+        conn = await Deno.connectTls({
+          hostname: this.config.connection.hostname,
+          port: this.config.connection.port,
+        });
+        this.secure = true;
+      } else {
+        conn = await Deno.connect({
+          hostname: this.config.connection.hostname,
+          port: this.config.connection.port,
+        });
+      }
+      this.#connection = new SMTPConnection(conn, config);
+
       await this.#prepareConnection();
     })();
   }
@@ -366,18 +348,18 @@ export class SMTPClient {
         CommandCode.READY,
       );
 
-      const conn = await Deno.startTls(this.#connection.conn!, {
+      const conn = await Deno.startTls(this.#connection.conn, {
         hostname: this.config.connection.hostname,
       });
-      this.#connection.setupConnection(conn);
-      this.#connection.secure = true;
+      this.#connection = new SMTPConnection(conn, this.config);
+      this.secure = true;
 
       await this.#connection.writeCmd("EHLO", this.config.connection.hostname);
 
       await this.#connection.readCmd();
     }
 
-    if (!this.config.debug.allowUnsecure && !this.#connection.secure) {
+    if (!this.config.debug.allowUnsecure && !this.secure) {
       this.#connection.close();
       this.#connection = null as unknown as SMTPConnection;
       throw new Error(
