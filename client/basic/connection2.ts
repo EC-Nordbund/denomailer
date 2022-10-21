@@ -6,19 +6,11 @@ interface Command {
   args: string | (string[]);
 }
 
-export class SMTPConnection {
+export class SMTPConnection extends WrapedConn {
   secure = false;
 
-  #wrapedConnection: WrapedConn;
-
-  conn: Deno.Conn | null = null;
-
   constructor(conn: Deno.Conn, private config: ResolvedClientOptions) {
-    this.#wrapedConnection = new WrapedConn(conn);
-  }
-
-  async close() {
-    await this.#wrapedConnection.close();
+    super(conn);
   }
 
   public assertCode(cmd: Command | null, code: number, msg?: string) {
@@ -36,7 +28,7 @@ export class SMTPConnection {
     while (
       result.length === 0 || (result.at(-1) && result.at(-1)!.at(3) === "-")
     ) {
-      result.push(await this.#wrapedConnection.readLine());
+      result.push(await this.readLine());
     }
 
     const nonNullResult = result.filter((v): v is string => v !== null);
@@ -61,7 +53,7 @@ export class SMTPConnection {
       console.table(args);
     }
 
-    return this.#wrapedConnection.write([args.join(" ") + "\r\n"]);
+    return this.write([args.join(" ") + "\r\n"]);
   }
 
   public writeCmdBinary(...args: Uint8Array[]) {
@@ -69,6 +61,6 @@ export class SMTPConnection {
       console.table(args.map(() => "Uint8Array"));
     }
 
-    return this.#wrapedConnection.write(args);
+    return this.write(args);
   }
 }
