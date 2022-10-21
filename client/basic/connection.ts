@@ -1,5 +1,11 @@
 import { ResolvedClientOptions } from "../../config/client.ts";
-import { WrapedConn } from "./stringConn.ts";
+
+import { QUE } from "./QUE.ts";
+import {
+  TextDecoderStream,
+  TextEncoderOrIntArrayStream,
+  TextLineStream,
+} from "./transforms.ts";
 
 interface Command {
   code: number;
@@ -7,43 +13,49 @@ interface Command {
 }
 
 export class SMTPConnection {
-  secure = false;
+  #outTransform = new TextEncoderOrIntArrayStream();
+  #decoder = new TextDecoderStream();
+  #lineStream = new TextLineStream();
 
-  #wrapedConnection!: WrapedConn;
+  #writableTransformStream = new TransformStream<
+    string | Uint8Array,
+    string | Uint8Array
+  >();
+  #readableStream: ReadableStream<string>;
+  #reader: ReadableStreamDefaultReader<string>;
+  #writer: WritableStreamDefaultWriter<string | Uint8Array>;
 
-  conn: Deno.Conn | null = null;
+  #que = new QUE();
 
-  constructor(private config: ResolvedClientOptions) {
-    this.ready = this.#connect();
+  constructor(public conn: Deno.Conn, private config: ResolvedClientOptions) {
+    this.#writableTransformStream.readable.pipeThrough(this.#outTransform)
+      .pipeTo(this.conn.writable);
+    this.#readableStream = this.conn.readable.pipeThrough(this.#decoder)
+      .pipeThrough(this.#lineStream);
+    this.#reader = this.#readableStream.getReader();
+    this.#writer = this.#writableTransformStream.writable.getWriter();
   }
 
-  ready: Promise<void>;
-
-  async close() {
-    await this.ready;
-    await this.#wrapedConnection.close();
+  async readLine() {
+    const ret = await this.#reader.read();
+    return ret.value ?? null;
   }
 
-  // Needed for starttls to inject a new connection
-  setupConnection(conn: Deno.Conn) {
-    this.#wrapedConnection = new WrapedConn(conn);
-  }
+  async write(chunks: (string | Uint8Array)[]) {
+    if (chunks.length === 0) return;
 
-  async #connect() {
-    if (this.config.connection.tls) {
-      this.conn = await Deno.connectTls({
-        hostname: this.config.connection.hostname,
-        port: this.config.connection.port,
-      });
-      this.secure = true;
-    } else {
-      this.conn = await Deno.connect({
-        hostname: this.config.connection.hostname,
-        port: this.config.connection.port,
-      });
+    await this.#que.que();
+
+    for (const chunk of chunks) {
+      await this.#writer.write(chunk);
     }
 
-    this.setupConnection(this.conn);
+    this.#que.next();
+  }
+
+  close() {
+    this.conn.close();
+    this.#decoder.close();
   }
 
   public assertCode(cmd: Command | null, code: number, msg?: string) {
@@ -61,7 +73,7 @@ export class SMTPConnection {
     while (
       result.length === 0 || (result.at(-1) && result.at(-1)!.at(3) === "-")
     ) {
-      result.push(await this.#wrapedConnection.readLine());
+      result.push(await this.readLine());
     }
 
     const nonNullResult = result.filter((v): v is string => v !== null);
@@ -86,7 +98,7 @@ export class SMTPConnection {
       console.table(args);
     }
 
-    return this.#wrapedConnection.write([args.join(" ") + "\r\n"]);
+    return this.write([args.join(" ") + "\r\n"]);
   }
 
   public writeCmdBinary(...args: Uint8Array[]) {
@@ -94,6 +106,6 @@ export class SMTPConnection {
       console.table(args.map(() => "Uint8Array"));
     }
 
-    return this.#wrapedConnection.write(args);
+    return this.write(args);
   }
 }

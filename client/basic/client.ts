@@ -1,6 +1,6 @@
 import type { ResolvedSendConfig } from "../../config/mail/mod.ts";
 import { ResolvedClientOptions } from "../../config/client.ts";
-import { SMTPConnection } from "./connection3.ts";
+import { SMTPConnection } from "./connection.ts";
 import { QUE } from "./QUE.ts";
 
 const CommandCode = {
@@ -17,26 +17,22 @@ export class SMTPClient {
   #connection!: SMTPConnection;
   #que = new QUE();
 
-  conn!: Deno.Conn;
-
   constructor(private config: ResolvedClientOptions) {
-    // const c = new SMTPConnection(config);
-    // this.#connection = c;
-
     this.#ready = (async () => {
+      let conn: Deno.Conn;
       if (this.config.connection.tls) {
-        this.conn = await Deno.connectTls({
+        conn = await Deno.connectTls({
           hostname: this.config.connection.hostname,
           port: this.config.connection.port,
         });
         this.secure = true;
       } else {
-        this.conn = await Deno.connect({
+        conn = await Deno.connect({
           hostname: this.config.connection.hostname,
           port: this.config.connection.port,
         });
       }
-      this.#connection = new SMTPConnection(this.conn, config);
+      this.#connection = new SMTPConnection(conn, config);
 
       await this.#prepareConnection();
     })();

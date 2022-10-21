@@ -3,7 +3,7 @@ export class TextEncoderOrIntArrayStream implements TransformStream {
 
   #transform = new TransformStream<string | Uint8Array, Uint8Array>({
     transform: (chunk, ctx) => {
-      if(typeof chunk === "string") {
+      if (typeof chunk === "string") {
         ctx.enqueue(this.#encoder.encode(chunk));
         return;
       }
@@ -38,8 +38,8 @@ export class TextLineStream {
     chunk = this.#buf + chunk;
 
     const chunks = chunk.split("\r\n");
-    if(chunks.length > 1) {
-      for(let i = 0;i < chunks.length - 1;i++) {
+    if (chunks.length > 1) {
+      for (let i = 0; i < chunks.length - 1; i++) {
         controller.enqueue(chunks[i]);
       }
     }
@@ -55,13 +55,13 @@ export class TextDecoderStream implements TransformStream {
     this.#transform = new TransformStream({
       transform: (chunk, controller) => {
         const decoded = this.#decoder.decode(chunk, { stream: true });
-        if(decoded) {
+        if (decoded) {
           controller.enqueue(decoded);
         }
       },
       flush: (controller) => {
         const final = this.#decoder.decode();
-        if(final) {
+        if (final) {
           controller.enqueue(final);
         }
       },
