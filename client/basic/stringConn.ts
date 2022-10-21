@@ -60,9 +60,10 @@ export class WrapedConn {
     this.#que.next()
   }
 
-  close() {
+  async close() {
     this.#reader.releaseLock()
     // await this.#reader.cancel()
     this.conn.close()
+    await this.#decoder.readable.cancel
   }
 }
