@@ -24,6 +24,67 @@ class TextEncoderOrIntArrayStream {
 }
 
 
+class TextDecoderStream {
+  #decoder: TextDecoder;
+  #transform: TransformStream<BufferSource, string>;
+
+  constructor(label = "utf-8", options: TextDecoderOptions = {}) {
+    this.#decoder = new TextDecoder(label, options);
+    this.#transform = new TransformStream({
+      // The transform and flush functions need access to TextDecoderStream's
+      // `this`, so they are defined as functions rather than methods.
+      transform: (chunk, controller) => {
+        try {
+          const decoded = this.#decoder.decode(chunk, { stream: true });
+          if (decoded) {
+            controller.enqueue(decoded);
+          }
+          return Promise.resolve();
+        } catch (err) {
+          return Promise.reject(err);
+        }
+      },
+      flush: (controller) => {
+        try {
+          const final = this.#decoder.decode();
+          if (final) {
+            controller.enqueue(final);
+          }
+          return Promise.resolve();
+        } catch (err) {
+          return Promise.reject(err);
+        }
+      },
+    });
+  }
+
+  get encoding() {
+    return this.#decoder.encoding;
+  }
+
+  get fatal() {
+    return this.#decoder.fatal;
+  }
+
+  get ignoreBOM() {
+    return this.#decoder.ignoreBOM;
+  }
+
+  /** @returns {ReadableStream<string>} */
+  get readable() {
+    return this.#transform.readable;
+  }
+
+  /** @returns {WritableStream<BufferSource>} */
+  get writable() {
+    return this.#transform.writable;
+  }
+
+  close() {
+    this.#decoder.decode()
+  }
+}
+
 export class WrapedConn {
   #outTransform = new TextEncoderOrIntArrayStream()
   #decoder = new TextDecoderStream();
@@ -60,12 +121,14 @@ export class WrapedConn {
     this.#que.next()
   }
 
-  async close() {
-    this.#reader.releaseLock()
-    
-    // await this.#reader.cancel()
+  close() {
+    // this.#reader.releaseLock()
     this.conn.close()
-    await this.#decoder.writable.abort()
+    this.#decoder.close()
+    // await this.conn.readable.cancel()
+    // await this.#reader.cancel()
+    
+    // await this.#decoder.writable.abort()
     // await this.#decoder.readable.cancel()
   }
 }
