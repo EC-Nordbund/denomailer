@@ -60,7 +60,7 @@ export class WrapedConn {
     this.#que.next()
   }
 
-  close() {
-    this.conn.close()
+  async close() {
+    await this.conn.writable.close()
   }
 }
