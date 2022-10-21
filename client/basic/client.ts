@@ -363,7 +363,7 @@ export class SMTPClient {
       await this.#connection.readCmd();
     }
 
-    if (!this.config.debug.allowUnsecure && !this.#connection.secure) {
+    if (!this.config.debug.allowUnsecure && !this.secure) {
       this.#connection.close();
       this.#connection = null as unknown as SMTPConnection;
       throw new Error(

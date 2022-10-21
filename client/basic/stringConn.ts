@@ -1,4 +1,3 @@
-import { TextLineStream } from "../../deps.ts";
 import { QUE } from "./QUE.ts";
 
 class TextEncoderOrIntArrayStream implements TransformStream {
@@ -23,6 +22,34 @@ class TextEncoderOrIntArrayStream implements TransformStream {
   }
 }
 
+class TextLineStream {
+  #buf = "";
+  #transform = new TransformStream<string, string>({
+    transform: (chunk, controller) => this.#handle(chunk, controller),
+    flush: (controler) => this.#handle("\r\n", controler),
+  });
+
+  get readable() {
+    return this.#transform.readable;
+  }
+
+  get writable() {
+    return this.#transform.writable;
+  }
+
+  #handle(chunk: string, controller: TransformStreamDefaultController<string>) {
+    chunk = this.#buf + chunk;
+
+    const chunks = chunk.split("\r\n");
+    if (chunks.length > 1) {
+      for (let i = 0; i < chunks.length - 1; i++) {
+        controller.enqueue(chunks[i]);
+      }
+    }
+    this.#buf = chunks.at(-1) ?? "";
+  }
+}
+
 class TextDecoderStream implements TransformStream {
   #decoder: TextDecoder;
   #transform: TransformStream<BufferSource, string>;
@@ -30,43 +57,19 @@ class TextDecoderStream implements TransformStream {
   constructor(label = "utf-8", options: TextDecoderOptions = {}) {
     this.#decoder = new TextDecoder(label, options);
     this.#transform = new TransformStream({
-      // The transform and flush functions need access to TextDecoderStream's
-      // `this`, so they are defined as functions rather than methods.
       transform: (chunk, controller) => {
-        try {
-          const decoded = this.#decoder.decode(chunk, { stream: true });
-          if (decoded) {
-            controller.enqueue(decoded);
-          }
-          return Promise.resolve();
-        } catch (err) {
-          return Promise.reject(err);
+        const decoded = this.#decoder.decode(chunk, { stream: true });
+        if (decoded) {
+          controller.enqueue(decoded);
         }
       },
       flush: (controller) => {
-        try {
-          const final = this.#decoder.decode();
-          if (final) {
-            controller.enqueue(final);
-          }
-          return Promise.resolve();
-        } catch (err) {
-          return Promise.reject(err);
+        const final = this.#decoder.decode();
+        if (final) {
+          controller.enqueue(final);
         }
       },
     });
-  }
-
-  get encoding() {
-    return this.#decoder.encoding;
-  }
-
-  get fatal() {
-    return this.#decoder.fatal;
-  }
-
-  get ignoreBOM() {
-    return this.#decoder.ignoreBOM;
   }
 
   get readable() {
@@ -124,13 +127,7 @@ export class WrapedConn {
   }
 
   close() {
-    // this.#reader.releaseLock()
     this.conn.close();
     this.#decoder.close();
-    // await this.conn.readable.cancel()
-    // await this.#reader.cancel()
-
-    // await this.#decoder.writable.abort()
-    // await this.#decoder.readable.cancel()
   }
 }

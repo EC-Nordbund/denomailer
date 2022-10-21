@@ -7,8 +7,6 @@ interface Command {
 }
 
 export class SMTPConnection extends WrapedConn {
-  secure = false;
-
   constructor(conn: Deno.Conn, private config: ResolvedClientOptions) {
     super(conn);
   }
