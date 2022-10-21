@@ -30,6 +30,8 @@ export class SMTPConnection {
       return;
     }
     await this.#reader?.cancel();
+    await this.conn.closeWrite()
+    this.conn.close()
     // await this.#writer.
     // this.conn.close();
     
