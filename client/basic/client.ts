@@ -5,6 +5,7 @@ import { QUE } from "./QUE.ts";
 
 const CommandCode = {
   READY: 220,
+  AUTHO_NEXT: 334,
   AUTHO_SUCCESS: 235,
   OK: 250,
   BEGIN_DATA: 354,
@@ -101,59 +102,55 @@ export class SMTPClient {
       }
 
       dataMode = true;
-      await this.#connection.writeCmd("DATA");
-      this.#connection.assertCode(
-        await this.#connection.readCmd(),
-        CommandCode.BEGIN_DATA,
-      );
+      await this.#connection.writeCmdAndAssert(CommandCode.BEGIN_DATA, "DATA");
 
-      await this.#connection.writeCmd("Subject: ", config.subject);
-      await this.#connection.writeCmd(
+      this.#connection.writeCmd("Subject: ", config.subject);
+      this.#connection.writeCmd(
         "From: ",
         `${config.from.name} <${config.from.mail}>`,
       );
       if (config.to.length > 0) {
-        await this.#connection.writeCmd(
+        this.#connection.writeCmd(
           "To: ",
           config.to.map((m) => `${m.name} <${m.mail}>`).join(";"),
         );
       }
       if (config.cc.length > 0) {
-        await this.#connection.writeCmd(
+        this.#connection.writeCmd(
           "Cc: ",
           config.cc.map((m) => `${m.name} <${m.mail}>`).join(";"),
         );
       }
 
-      await this.#connection.writeCmd("Date: ", config.date);
+      this.#connection.writeCmd("Date: ", config.date);
 
       const obj = Object.entries(config.headers);
 
       for (let i = 0; i < obj.length; i++) {
         const [name, value] = obj[i];
-        await this.#connection.writeCmd(name + ": ", value);
+        this.#connection.writeCmd(name + ": ", value);
       }
 
       if (config.inReplyTo) {
-        await this.#connection.writeCmd("InReplyTo: ", config.inReplyTo);
+        this.#connection.writeCmd("InReplyTo: ", config.inReplyTo);
       }
 
       if (config.references) {
-        await this.#connection.writeCmd("Refrences: ", config.references);
+        this.#connection.writeCmd("Refrences: ", config.references);
       }
 
       if (config.replyTo) {
-        await this.#connection.writeCmd(
+        this.#connection.writeCmd(
           "ReplyTo: ",
           `${config.replyTo.name} <${config.replyTo.name}>`,
         );
       }
 
       if (config.priority) {
-        await this.#connection.writeCmd("Priority:", config.priority);
+        this.#connection.writeCmd("Priority:", config.priority);
       }
 
-      await this.#connection.writeCmd("MIME-Version: 1.0");
+      this.#connection.writeCmd("MIME-Version: 1.0");
 
       let boundaryAdditionAtt = 100;
       // calc msg boundary
@@ -187,11 +184,11 @@ export class SMTPClient {
 
       const attachmentBoundary = `attachment${boundaryAdditionAtt}`;
 
-      await this.#connection.writeCmd(
+      this.#connection.writeCmd(
         `Content-Type: multipart/mixed; boundary=${attachmentBoundary}`,
         "\r\n",
       );
-      await this.#connection.writeCmd(`--${attachmentBoundary}`);
+      this.#connection.writeCmd(`--${attachmentBoundary}`);
 
       let boundaryAddition = 100;
       // calc msg boundary
@@ -207,54 +204,54 @@ export class SMTPClient {
 
       const messageBoundary = `message${boundaryAddition}`;
 
-      await this.#connection.writeCmd(
+      this.#connection.writeCmd(
         `Content-Type: multipart/alternative; boundary=${messageBoundary}`,
         "\r\n",
       );
 
       for (let i = 0; i < config.mimeContent.length; i++) {
-        await this.#connection.writeCmd(`--${messageBoundary}`);
-        await this.#connection.writeCmd(
+        this.#connection.writeCmd(`--${messageBoundary}`);
+        this.#connection.writeCmd(
           "Content-Type: " + config.mimeContent[i].mimeType,
         );
         if (config.mimeContent[i].transferEncoding) {
-          await this.#connection.writeCmd(
+          this.#connection.writeCmd(
             `Content-Transfer-Encoding: ${
               config.mimeContent[i].transferEncoding
             }` + "\r\n",
           );
         } else {
           // Send new line
-          await this.#connection.writeCmd("");
+          this.#connection.writeCmd("");
         }
 
-        await this.#connection.writeCmd(config.mimeContent[i].content, "\r\n");
+        this.#connection.writeCmd(config.mimeContent[i].content, "\r\n");
       }
 
-      await this.#connection.writeCmd(`--${messageBoundary}--\r\n`);
+      this.#connection.writeCmd(`--${messageBoundary}--\r\n`);
 
       for (let i = 0; i < config.attachments.length; i++) {
         const attachment = config.attachments[i];
 
-        await this.#connection.writeCmd(`--${attachmentBoundary}`);
-        await this.#connection.writeCmd(
+        this.#connection.writeCmd(`--${attachmentBoundary}`);
+        this.#connection.writeCmd(
           "Content-Type:",
           attachment.contentType + ";",
           "name=" + attachment.filename,
         );
 
         if (attachment.contentID) {
-          await this.#connection.writeCmd(
+          this.#connection.writeCmd(
             `Content-ID: <${attachment.contentID}>`,
           );
         }
 
-        await this.#connection.writeCmd(
+        this.#connection.writeCmd(
           "Content-Disposition: attachment; filename=" + attachment.filename,
         );
 
         if (attachment.encoding === "base64") {
-          await this.#connection.writeCmd(
+          this.#connection.writeCmd(
             "Content-Transfer-Encoding: base64",
             "\r\n",
           );
@@ -269,7 +266,7 @@ export class SMTPClient {
               (line + 1) * 75,
             );
 
-            await this.#connection.writeCmd(lineOfBase64);
+            this.#connection.writeCmd(lineOfBase64);
           }
 
           // if (
@@ -283,19 +280,20 @@ export class SMTPClient {
           //   await this.#connection.writeCmdBinary(attachment.content);
           // }
 
-          await this.#connection.writeCmd("\r\n");
+          this.#connection.writeCmd("\r\n");
         } else if (attachment.encoding === "text") {
-          await this.#connection.writeCmd(
+          this.#connection.writeCmd(
             "Content-Transfer-Encoding: quoted-printable",
             "\r\n",
           );
 
-          await this.#connection.writeCmd(attachment.content, "\r\n");
+          this.#connection.writeCmd(attachment.content, "\r\n");
         }
       }
 
-      await this.#connection.writeCmd(`--${attachmentBoundary}--\r\n`);
+      this.#connection.writeCmd(`--${attachmentBoundary}--\r\n`);
 
+      // Wait for all writes to finish
       await this.#connection.writeCmd(".\r\n");
 
       this.#connection.assertCode(
@@ -342,11 +340,7 @@ export class SMTPClient {
     if (
       this.#supportedFeatures.has("STARTTLS") && !this.config.debug.noStartTLS
     ) {
-      await this.#connection.writeCmd("STARTTLS");
-      this.#connection.assertCode(
-        await this.#connection.readCmd(),
-        CommandCode.READY,
-      );
+      this.#connection.writeCmdAndAssert(CommandCode.READY, "STARTTLS");
 
       const conn = await Deno.startTls(this.#connection.conn, {
         hostname: this.config.connection.hostname,
@@ -354,9 +348,7 @@ export class SMTPClient {
       this.#connection = new SMTPConnection(conn, this.config);
       this.secure = true;
 
-      await this.#connection.writeCmd("EHLO", this.config.connection.hostname);
-
-      await this.#connection.readCmd();
+      this.#connection.writeCmdAndRead("EHLO", this.config.connection.hostname);
     }
 
     if (!this.config.debug.allowUnsecure && !this.secure) {
@@ -368,20 +360,18 @@ export class SMTPClient {
     }
 
     if (this.config.connection.auth) {
-      await this.#connection.writeCmd("AUTH", "LOGIN");
-      this.#connection.assertCode(await this.#connection.readCmd(), 334);
-
-      await this.#connection.writeCmd(
+      await this.#connection.writeCmdAndAssert(
+        CommandCode.AUTHO_NEXT,
+        "AUTH",
+        "LOGIN",
+      );
+      await this.#connection.writeCmdAndAssert(
+        CommandCode.AUTHO_NEXT,
         btoa(this.config.connection.auth.username),
       );
-      this.#connection.assertCode(await this.#connection.readCmd(), 334);
-
-      await this.#connection.writeCmd(
-        btoa(this.config.connection.auth.password),
-      );
-      this.#connection.assertCode(
-        await this.#connection.readCmd(),
+      await this.#connection.writeCmdAndAssert(
         CommandCode.AUTHO_SUCCESS,
+        btoa(this.config.connection.auth.password),
       );
     }
 

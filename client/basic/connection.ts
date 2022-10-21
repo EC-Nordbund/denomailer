@@ -108,4 +108,15 @@ export class SMTPConnection {
 
     return this.write(args);
   }
+
+  public async writeCmdAndRead(...args: string[]) {
+    await this.writeCmd(...args);
+    return this.readCmd();
+  }
+
+  public async writeCmdAndAssert(code: number, ...args: string[]) {
+    const res = await this.writeCmdAndRead(...args);
+    this.assertCode(res, code);
+    return res;
+  }
 }
