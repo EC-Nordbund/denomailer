@@ -1,6 +1,6 @@
 import type { ResolvedSendConfig } from "../../config/mail/mod.ts";
 import { ResolvedClientOptions } from "../../config/client.ts";
-import { SMTPConnection } from "./connection.ts";
+import { SMTPConnection } from "./connection2.ts";
 import { QUE } from "./QUE.ts";
 
 const CommandCode = {
@@ -12,15 +12,32 @@ const CommandCode = {
 };
 
 export class SMTPClient {
-  #connection: SMTPConnection;
+  secure = false;
+
+  #connection!: SMTPConnection;
   #que = new QUE();
 
+  conn!: Deno.Conn;
+
   constructor(private config: ResolvedClientOptions) {
-    const c = new SMTPConnection(config);
-    this.#connection = c;
+    // const c = new SMTPConnection(config);
+    // this.#connection = c;
 
     this.#ready = (async () => {
-      await c.ready;
+      if (this.config.connection.tls) {
+        this.conn = await Deno.connectTls({
+          hostname: this.config.connection.hostname,
+          port: this.config.connection.port,
+        });
+        this.secure = true;
+      } else {
+        this.conn = await Deno.connect({
+          hostname: this.config.connection.hostname,
+          port: this.config.connection.port,
+        });
+      }
+      this.#connection = new SMTPConnection(this.conn, config);
+
       await this.#prepareConnection();
     })();
   }
@@ -338,8 +355,8 @@ export class SMTPClient {
       const conn = await Deno.startTls(this.#connection.conn!, {
         hostname: this.config.connection.hostname,
       });
-      this.#connection.setupConnection(conn);
-      this.#connection.secure = true;
+      this.#connection = new SMTPConnection(conn, this.config);
+      this.secure = true;
 
       await this.#connection.writeCmd("EHLO", this.config.connection.hostname);
 
