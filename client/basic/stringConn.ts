@@ -64,6 +64,7 @@ export class WrapedConn {
     this.#reader.releaseLock()
     // await this.#reader.cancel()
     this.conn.close()
-    await this.#decoder.readable.cancel
+    // await this.#decoder.writable.close()
+    await this.#decoder.readable.cancel()
   }
 }
