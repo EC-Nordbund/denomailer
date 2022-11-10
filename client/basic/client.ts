@@ -128,7 +128,7 @@ export class SMTPClient {
       }
 
       if (config.references) {
-        this.#connection.writeCmd("Refrences: ", config.references);
+        this.#connection.writeCmd("References: ", config.references);
       }
 
       if (config.replyTo) {
