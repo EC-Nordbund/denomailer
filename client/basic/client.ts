@@ -293,7 +293,7 @@ export class SMTPClient {
       this.#que.next();
     } catch (ex) {
       if (dataMode) {
-        console.error("Error while in datamode - connection not revoverable");
+        console.error("Error while in datamode - connection not recoverable");
         queueMicrotask(() => {
           this.#connection.conn?.close();
         });
