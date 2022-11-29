@@ -326,7 +326,12 @@ export class SMTPClient {
     }
 
     if (
-      this.#supportedFeatures.has("STARTTLS") && !this.config.debug.noStartTLS
+      // When in TLS don't use STARTTLS
+      !this.secure &&
+      // Check for STARTTLS support
+      this.#supportedFeatures.has("STARTTLS") &&
+      // Check that STARTTLS is allowed
+      !this.config.debug.noStartTLS
     ) {
       this.#connection.writeCmdAndAssert(CommandCode.READY, "STARTTLS");
 
