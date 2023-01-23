@@ -134,7 +134,7 @@ export class SMTPClient {
       if (config.replyTo) {
         this.#connection.writeCmd(
           "ReplyTo: ",
-          `${config.replyTo.name} <${config.replyTo.name}>`,
+          `${config.replyTo.name} <${config.replyTo.mail}>`,
         );
       }
 
