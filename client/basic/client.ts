@@ -124,6 +124,29 @@ export class SMTPClient {
     }
   }
 
+  encodeRelated(content: ResolvedContent) {
+    const boundaryAddRel = this.calcBoundary(
+      content.content + "\n" +
+        content.relatedAttachments.map((v) => v.content).join("\n"),
+      new RegExp("--related([0-9]+)", "g"),
+    );
+
+    const relatedBoundary = `related${boundaryAddRel}`;
+    this.#connection.writeCmd(
+      `Content-Type: multipart/related; boundary=${relatedBoundary}\r\n; type=${content.mimeType}`,
+    );
+
+    this.#connection.writeCmd(`--${relatedBoundary}`);
+    this.encodeContent(content);
+
+    for (let i = 0; i < content.relatedAttachments.length; i++) {
+      this.#connection.writeCmd(`--${relatedBoundary}`);
+      this.encodeAttachment(content.relatedAttachments[i]);
+    }
+
+    this.#connection.writeCmd(`--${relatedBoundary}--\r\n`);
+  }
+
   async send(config: ResolvedSendConfig) {
     await this.#ready;
     let dataMode = false;
