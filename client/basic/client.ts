@@ -124,7 +124,7 @@ export class SMTPClient {
       }
 
       if (config.inReplyTo) {
-        this.#connection.writeCmd("InReplyTo: ", config.inReplyTo);
+        this.#connection.writeCmd("Reply-To: ", config.inReplyTo);
       }
 
       if (config.references) {
