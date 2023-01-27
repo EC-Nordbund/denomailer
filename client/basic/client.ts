@@ -85,22 +85,22 @@ export class SMTPClient {
     this.#connection.writeCmd(
       `Content-Type: ${attachment.contentType}; name=${attachment.filename}`,
     );
-  
+
     if (attachment.contentID) {
       this.#connection.writeCmd(
         `Content-ID: <${attachment.contentID}>`,
       );
     }
-  
+
     this.#connection.writeCmd(
       `Content-Disposition: ${attachment.contentDisposition}; filename=${attachment.filename}`,
     );
-  
+
     if (attachment.encoding === "base64") {
       this.#connection.writeCmd(
         "Content-Transfer-Encoding: base64\r\n",
       );
-  
+
       for (
         let line = 0;
         line < Math.ceil(attachment.content.length / 75);
@@ -110,16 +110,16 @@ export class SMTPClient {
           line * 75,
           (line + 1) * 75,
         );
-  
+
         this.#connection.writeCmd(lineOfBase64);
       }
-  
+
       this.#connection.writeCmd("\r\n");
     } else if (attachment.encoding === "text") {
       this.#connection.writeCmd(
         "Content-Transfer-Encoding: quoted-printable\r\n",
       );
-  
+
       this.#connection.writeCmd(attachment.content + "\r\n");
     }
   }
