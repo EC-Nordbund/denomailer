@@ -264,6 +264,7 @@ export interface SendConfig {
   content?: string;
   mimeContent?: Content[];
   html?: string;
+  relatedAttachments?: Attachment[];
   inReplyTo?: string;
   replyTo?: string;
   references?: string;
@@ -301,6 +302,10 @@ You can encode an array of attachments as base64, text, or binary. Note that
 base64 is converted to binary and is only present for a better API. So don't
 encode your binary files as base64, otherwise denomailer can't convert it back
 to binary.
+
+#### relatedAttachments
+
+Attachments related to the html content, for example embedded images.
 
 #### internalTag
 
