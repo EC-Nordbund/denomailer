@@ -12,14 +12,16 @@ export type Attachment =
     | base64Attachment
     | arrayBufferLikeAttachment
   )
-  & baseAttachment;
+  & baseAttachment
+  & { contentDisposition?: "attachment" | "inline" };
 
 export type ResolvedAttachment =
   & (
     | textAttachment
     | base64Attachment
   )
-  & baseAttachment;
+  & baseAttachment
+  & { contentDisposition: "attachment" | "inline" };
 
 type textAttachment = { encoding: "text"; content: string };
 type base64Attachment = { encoding: "base64"; content: string };
@@ -35,8 +37,15 @@ export function resolveAttachment(attachment: Attachment): ResolvedAttachment {
       contentType: attachment.contentType,
       encoding: "base64",
       content: base64Encode(attachment.content),
+      contentDisposition: attachment.contentDisposition ?? "attachment",
     };
   } else {
-    return attachment;
+    return {
+      filename: attachment.filename,
+      contentType: attachment.contentType,
+      encoding: attachment.encoding,
+      content: attachment.content,
+      contentDisposition: attachment.contentDisposition ?? "attachment",
+    };
   }
 }
