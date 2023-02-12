@@ -36,6 +36,11 @@ export class SMTPConnection {
     this.#writer = this.#writableTransformStream.writable.getWriter();
   }
 
+  async cleanupForStartTLS() {
+  await this.#reader.cancel()
+   await this.#writer.close()
+  }
+
   async readLine() {
     const ret = await this.#reader.read();
     return ret.value ?? null;
@@ -65,6 +70,7 @@ export class SMTPConnection {
       // That is no error
     }
   }
+
 
   public assertCode(cmd: Command | null, code: number, msg?: string) {
     if (!cmd) {
