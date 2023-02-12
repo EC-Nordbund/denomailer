@@ -54,8 +54,12 @@ export class SMTPConnection {
   }
 
   close() {
-    this.conn.close();
-    this.#decoder.close();
+    try {
+      this.conn.close();
+    } catch (_ex) {}
+    try {
+      this.#decoder.close();
+    } catch (_ex) {}
   }
 
   public assertCode(cmd: Command | null, code: number, msg?: string) {
