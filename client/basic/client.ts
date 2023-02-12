@@ -242,6 +242,10 @@ export class SMTPClient {
           "Content-Disposition: attachment; filename=" + attachment.filename,
         );
 
+        this.#connection.writeCmd(
+          `Content-ID: <${attachment.contentID}>`,
+        );
+
         if (attachment.encoding === "base64") {
           this.#connection.writeCmd(
             "Content-Transfer-Encoding: base64\r\n",

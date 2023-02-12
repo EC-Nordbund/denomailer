@@ -28,11 +28,15 @@ type arrayBufferLikeAttachment = {
   encoding: "binary";
 };
 
+let idC = 0;
+
 export function resolveAttachment(attachment: Attachment): ResolvedAttachment {
+  idC++;
   if (attachment.encoding === "binary") {
     return {
       filename: attachment.filename,
       contentType: attachment.contentType,
+      contentID: attachment.contentID ?? `id${idC}`,
       encoding: "base64",
       content: base64Encode(attachment.content),
     };
