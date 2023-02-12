@@ -334,7 +334,7 @@ export class SMTPClient {
     ) {
       this.#connection.writeCmdAndAssert(CommandCode.READY, "STARTTLS");
 
-      await this.#connection.cleanupForStartTLS()
+      await this.#connection.cleanupForStartTLS();
 
       const conn = await Deno.startTls(this.#connection.conn, {
         hostname: this.config.connection.hostname,

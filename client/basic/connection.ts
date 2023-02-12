@@ -37,8 +37,8 @@ export class SMTPConnection {
   }
 
   async cleanupForStartTLS() {
-  await this.#reader.cancel()
-   await this.#writer.close()
+    await this.#reader.cancel();
+    await this.#writer.close();
   }
 
   async readLine() {
@@ -70,7 +70,6 @@ export class SMTPConnection {
       // That is no error
     }
   }
-
 
   public assertCode(cmd: Command | null, code: number, msg?: string) {
     if (!cmd) {
