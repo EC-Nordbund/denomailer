@@ -10,7 +10,6 @@ const encoder = new TextEncoder();
  * @returns encoded string
  */
 export function quotedPrintableEncode(data: string, encLB = false) {
-  data.replaceAll("=", "=3D");
 
   if (!encLB) {
     data = data.replaceAll(" \r\n", "=20\r\n").replaceAll(" \n", "=20\n");
