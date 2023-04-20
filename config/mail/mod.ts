@@ -3,7 +3,7 @@ import {
   resolveAttachment,
   ResolvedAttachment,
 } from "./attachments.ts";
-import { Content, resolveContent } from "./content.ts";
+import { Content, ResolvedContent, resolveMessage } from "./content.ts";
 import {
   isSingleMail,
   mailList,
@@ -28,6 +28,7 @@ export interface SendConfig {
   content?: string;
   mimeContent?: Content[];
   html?: string;
+  relatedAttachments?: Attachment[];
   inReplyTo?: string;
   replyTo?: string;
   references?: string;
@@ -48,7 +49,7 @@ export interface ResolvedSendConfig {
   from: saveMailObject;
   date: string;
   subject: string;
-  mimeContent: Content[];
+  mimeContent: ResolvedContent[];
   inReplyTo?: string;
   replyTo?: saveMailObject;
   references?: string;
@@ -69,6 +70,7 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     content,
     mimeContent,
     html,
+    relatedAttachments,
     inReplyTo,
     replyTo,
     references,
@@ -84,9 +86,10 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     bcc: parseMailList(bcc),
     from: parseSingleEmail(from),
     date,
-    mimeContent: resolveContent({
+    mimeContent: resolveMessage({
       mimeContent,
       html,
+      relatedAttachments,
       text: content,
     }),
     replyTo: replyTo ? parseSingleEmail(replyTo) : undefined,

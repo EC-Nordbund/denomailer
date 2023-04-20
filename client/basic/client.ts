@@ -1,4 +1,6 @@
 import type { ResolvedSendConfig } from "../../config/mail/mod.ts";
+import type { ResolvedContent } from "../../config/mail/content.ts";
+import type { ResolvedAttachment } from "../../config/mail/attachments.ts";
 import { ResolvedClientOptions } from "../../config/client.ts";
 import { SMTPConnection } from "./connection.ts";
 import { QUE } from "./QUE.ts";
@@ -51,6 +53,98 @@ export class SMTPClient {
 
   get idle() {
     return this.#que.idle;
+  }
+
+  calcBoundary(content: string, pattern: RegExp): number {
+    let boundary = 100;
+
+    const matches = content.matchAll(pattern);
+    for (const match of matches) {
+      boundary += parseInt(match[1], 10);
+    }
+
+    return boundary;
+  }
+
+  encodeContent(content: ResolvedContent) {
+    this.#connection.writeCmd(
+      "Content-Type: " + content.mimeType,
+    );
+    if (content.transferEncoding) {
+      this.#connection.writeCmd(
+        `Content-Transfer-Encoding: ${content.transferEncoding}\r\n`,
+      );
+    } else {
+      this.#connection.writeCmd("");
+    }
+
+    this.#connection.writeCmd(content.content + "\r\n");
+  }
+
+  encodeAttachment(attachment: ResolvedAttachment) {
+    this.#connection.writeCmd(
+      `Content-Type: ${attachment.contentType}; name=${attachment.filename}`,
+    );
+
+    if (attachment.contentID) {
+      this.#connection.writeCmd(
+        `Content-ID: <${attachment.contentID}>`,
+      );
+    }
+
+    this.#connection.writeCmd(
+      `Content-Disposition: ${attachment.contentDisposition}; filename=${attachment.filename}`,
+    );
+
+    if (attachment.encoding === "base64") {
+      this.#connection.writeCmd(
+        "Content-Transfer-Encoding: base64\r\n",
+      );
+
+      for (
+        let line = 0;
+        line < Math.ceil(attachment.content.length / 75);
+        line++
+      ) {
+        const lineOfBase64 = attachment.content.slice(
+          line * 75,
+          (line + 1) * 75,
+        );
+
+        this.#connection.writeCmd(lineOfBase64);
+      }
+
+      this.#connection.writeCmd("\r\n");
+    } else if (attachment.encoding === "text") {
+      this.#connection.writeCmd(
+        "Content-Transfer-Encoding: quoted-printable\r\n",
+      );
+
+      this.#connection.writeCmd(attachment.content + "\r\n");
+    }
+  }
+
+  encodeRelated(content: ResolvedContent) {
+    const boundaryAddRel = this.calcBoundary(
+      content.content + "\n" +
+        content.relatedAttachments.map((v) => v.content).join("\n"),
+      new RegExp("--related([0-9]+)", "g"),
+    );
+
+    const relatedBoundary = `related${boundaryAddRel}`;
+    this.#connection.writeCmd(
+      `Content-Type: multipart/related; boundary=${relatedBoundary}\r\n; type=${content.mimeType}`,
+    );
+
+    this.#connection.writeCmd(`--${relatedBoundary}`);
+    this.encodeContent(content);
+
+    for (let i = 0; i < content.relatedAttachments.length; i++) {
+      this.#connection.writeCmd(`--${relatedBoundary}`);
+      this.encodeAttachment(content.relatedAttachments[i]);
+    }
+
+    this.#connection.writeCmd(`--${relatedBoundary}--\r\n`);
   }
 
   async send(config: ResolvedSendConfig) {
@@ -144,34 +238,10 @@ export class SMTPClient {
 
       this.#connection.writeCmd("MIME-Version: 1.0");
 
-      let boundaryAdditionAtt = 100;
-      // calc msg boundary
-      // TODO: replace this with a match or so.
-      config.mimeContent.map((v) => v.content).join("\n").replace(
+      const boundaryAdditionAtt = this.calcBoundary(
+        config.mimeContent.map((v) => v.content).join("\n") + "\n" +
+          config.attachments.map((v) => v.content).join("\n"),
         new RegExp("--attachment([0-9]+)", "g"),
-        (_, numb) => {
-          boundaryAdditionAtt += parseInt(numb, 10);
-
-          return "";
-        },
-      );
-
-      // const dec = new TextDecoder();
-
-      config.attachments.map((v) => {
-        return v.content;
-        // if (v.encoding === "text") return v.content;
-
-        // const arr = new Uint8Array(v.content);
-
-        // return dec.decode(arr);
-      }).join("\n").replace(
-        new RegExp("--attachment([0-9]+)", "g"),
-        (_, numb) => {
-          boundaryAdditionAtt += parseInt(numb, 10);
-
-          return "";
-        },
       );
 
       const attachmentBoundary = `attachment${boundaryAdditionAtt}`;
@@ -182,19 +252,12 @@ export class SMTPClient {
       );
       this.#connection.writeCmd(`--${attachmentBoundary}`);
 
-      let boundaryAddition = 100;
-      // calc msg boundary
-      // TODO: replace this with a match or so.
-      config.mimeContent.map((v) => v.content).join("\n").replace(
+      const boundaryAdditionMsg = this.calcBoundary(
+        config.mimeContent.map((v) => v.content).join("\n"),
         new RegExp("--message([0-9]+)", "g"),
-        (_, numb) => {
-          boundaryAddition += parseInt(numb, 10);
-
-          return "";
-        },
       );
 
-      const messageBoundary = `message${boundaryAddition}`;
+      const messageBoundary = `message${boundaryAdditionMsg}`;
 
       this.#connection.writeCmd(
         `Content-Type: multipart/alternative; boundary=${messageBoundary}`,
@@ -203,83 +266,18 @@ export class SMTPClient {
 
       for (let i = 0; i < config.mimeContent.length; i++) {
         this.#connection.writeCmd(`--${messageBoundary}`);
-        this.#connection.writeCmd(
-          "Content-Type: " + config.mimeContent[i].mimeType,
-        );
-        if (config.mimeContent[i].transferEncoding) {
-          this.#connection.writeCmd(
-            `Content-Transfer-Encoding: ${
-              config.mimeContent[i].transferEncoding
-            }` + "\r\n",
-          );
+        if (config.mimeContent[i].relatedAttachments.length === 0) {
+          this.encodeContent(config.mimeContent[i]);
         } else {
-          // Send new line
-          this.#connection.writeCmd("");
+          this.encodeRelated(config.mimeContent[i]);
         }
-
-        this.#connection.writeCmd(config.mimeContent[i].content, "\r\n");
       }
 
       this.#connection.writeCmd(`--${messageBoundary}--\r\n`);
 
       for (let i = 0; i < config.attachments.length; i++) {
-        const attachment = config.attachments[i];
-
         this.#connection.writeCmd(`--${attachmentBoundary}`);
-        this.#connection.writeCmd(
-          "Content-Type:",
-          attachment.contentType + ";",
-          "name=" + attachment.filename,
-        );
-
-        if (attachment.contentID) {
-          this.#connection.writeCmd(
-            `Content-ID: <${attachment.contentID}>`,
-          );
-        }
-
-        this.#connection.writeCmd(
-          "Content-Disposition: attachment; filename=" + attachment.filename,
-        );
-
-        if (attachment.encoding === "base64") {
-          this.#connection.writeCmd(
-            "Content-Transfer-Encoding: base64\r\n",
-          );
-
-          for (
-            let line = 0;
-            line < Math.ceil(attachment.content.length / 75);
-            line++
-          ) {
-            const lineOfBase64 = attachment.content.slice(
-              line * 75,
-              (line + 1) * 75,
-            );
-
-            this.#connection.writeCmd(lineOfBase64);
-          }
-
-          // if (
-          //   attachment.content instanceof ArrayBuffer ||
-          //   attachment.content instanceof SharedArrayBuffer
-          // ) {
-          //   await this.#connection.writeCmdBinary(
-          //     new Uint8Array(attachment.content),
-          //   );
-          // } else {
-          //   await this.#connection.writeCmdBinary(attachment.content);
-          // }
-
-          this.#connection.writeCmd("\r\n");
-        } else if (attachment.encoding === "text") {
-          this.#connection.writeCmd(
-            "Content-Transfer-Encoding: quoted-printable",
-            "\r\n",
-          );
-
-          this.#connection.writeCmd(attachment.content, "\r\n");
-        }
+        this.encodeAttachment(config.attachments[i]);
       }
 
       this.#connection.writeCmd(`--${attachmentBoundary}--\r\n`);
