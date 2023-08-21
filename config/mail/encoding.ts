@@ -74,6 +74,8 @@ function hasNonAsciiCharacters(str: string) {
 }
 
 export function quotedPrintableEncodeInline(data: string) {
+  console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+  return data;
   if (hasNonAsciiCharacters(data) || data.startsWith("=?")) {
     return `=?utf-8?Q?${quotedPrintableEncode(data)}?=`;
   }
