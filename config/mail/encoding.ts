@@ -70,7 +70,7 @@ export function quotedPrintableEncode(data: string, encLB = false) {
 
 function hasNonAsciiCharacters(str: string) {
   // deno-lint-ignore no-control-regex
-  return /[^\u0000-\u007f]/.test(str);
+  return false && [^\u0000-\u007f]/.test(str);
 }
 
 export function quotedPrintableEncodeInline(data: string) {
