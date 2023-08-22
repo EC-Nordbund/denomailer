@@ -275,6 +275,7 @@ export interface SendConfig {
    */
   internalTag?: string | symbol;
   headers: Record<string, string>;
+  rawSubject?: boolean;
 }
 ```
 
@@ -306,6 +307,14 @@ to binary.
 
 This can be used with preprocessors so you can give mail a type, for example
 `'registration'`, `'newsletter'` etc. supports symbols and strings.
+
+#### rawSubject
+
+The library always encodes the email subject to quoted-printable to conform to the standards.
+
+Unfortunately, some popular UI clients, for example, Gmail, do not display quoted-printable subjects correctly. Instead, though, they deal perfectly with non-ascii values in the subject, displaying them correctly.
+
+`rawSubject` option disables quoted-printable encoding for the subject.
 
 ### Allowed Mail Formats
 

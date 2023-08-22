@@ -39,6 +39,7 @@ export interface SendConfig {
    */
   internalTag?: string | symbol;
   headers?: Headers;
+  rawSubject?: boolean;
 }
 
 export interface ResolvedSendConfig {
@@ -76,6 +77,7 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     attachments,
     internalTag,
     headers,
+    rawSubject,
   } = config;
 
   return {
@@ -91,7 +93,7 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     }),
     replyTo: replyTo ? parseSingleEmail(replyTo) : undefined,
     inReplyTo,
-    subject: quotedPrintableEncodeInline(subject),
+    subject: rawSubject ? subject : quotedPrintableEncodeInline(subject),
     attachments: attachments
       ? attachments.map((attachment) => resolveAttachment(attachment))
       : [],
