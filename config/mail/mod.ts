@@ -93,7 +93,7 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     }),
     replyTo: replyTo ? parseSingleEmail(replyTo) : undefined,
     inReplyTo,
-    subject: rawSubject ?  quotedPrintableEncodeInline(subject) : subject,
+    subject: rawSubject ? subject : quotedPrintableEncodeInline(subject),
     attachments: attachments
       ? attachments.map((attachment) => resolveAttachment(attachment))
       : [],
