@@ -6,6 +6,9 @@ import { SMTPClient } from "../basic/client.ts";
 import { ResolvedSendConfig } from "../../config/mail/mod.ts";
 import type { Message } from "./worker.ts";
 
+const doPostMessage = (message: Message): ReturnType<typeof postMessage> =>
+  postMessage(message);
+
 let client: SMTPClient;
 
 let cb: () => void;
@@ -21,13 +24,10 @@ async function send(config: ResolvedSendConfig) {
   if (!hasIdlePromise) {
     hasIdlePromise = true;
     await client.idle;
-    postMessage(false);
+    doPostMessage(false);
     hasIdlePromise = false;
   }
 }
-
-const doPostMessage = (message: Message): ReturnType<typeof postMessage> =>
-  postMessage(message);
 
 addEventListener("message", async (ev: MessageEvent) => {
   if (ev.data.__setup) {
