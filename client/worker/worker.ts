@@ -1,6 +1,20 @@
 import { ResolvedSendConfig } from "../../config/mail/mod.ts";
 import { ResolvedClientOptions } from "../../config/client.ts";
 
+type PromiseExecutor = Parameters<
+  ConstructorParameters<typeof Promise<void>>[0]
+>;
+type PromiseExecutorResolve = PromiseExecutor[0];
+type PromiseExecutorReject = PromiseExecutor[1];
+type PromiseExecutorResolveValue = Parameters<PromiseExecutorResolve>[0];
+type PromiseExecutorRejectReason = Parameters<PromiseExecutorReject>[0];
+
+export type Message = boolean | {
+  __ret: number;
+  res?: PromiseExecutorResolveValue;
+  err?: PromiseExecutorRejectReason;
+};
+
 export class SMTPWorker {
   id = 1;
   #timeout: number;
@@ -19,8 +33,7 @@ export class SMTPWorker {
 
   #resolver = new Map<
     number,
-    // deno-lint-ignore no-explicit-any
-    { res: (res: any) => void; rej: (err: Error) => void }
+    { res: PromiseExecutorResolve; rej: PromiseExecutorReject }
   >();
 
   #startup() {
@@ -40,8 +53,7 @@ export class SMTPWorker {
 
     this.#w.addEventListener(
       "message",
-      // deno-lint-ignore no-explicit-any
-      (ev: MessageEvent<boolean | { __ret: number; res: any; err: any }>) => {
+      (ev: MessageEvent<Message>) => {
         if (typeof ev.data === "object") {
           if ("err" in ev.data) {
             this.#resolver.get(ev.data.__ret)?.rej(ev.data.err);

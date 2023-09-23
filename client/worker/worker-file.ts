@@ -4,6 +4,7 @@
 
 import { SMTPClient } from "../basic/client.ts";
 import { ResolvedSendConfig } from "../../config/mail/mod.ts";
+import type { Message } from "./worker.ts";
 
 let client: SMTPClient;
 
@@ -25,6 +26,9 @@ async function send(config: ResolvedSendConfig) {
   }
 }
 
+const doPostMessage = (message: Message): ReturnType<typeof postMessage> =>
+  postMessage(message);
+
 addEventListener("message", async (ev: MessageEvent) => {
   if (ev.data.__setup) {
     client = new SMTPClient(ev.data.__setup);
@@ -32,7 +36,7 @@ addEventListener("message", async (ev: MessageEvent) => {
     return;
   }
   if (ev.data.__check_idle) {
-    postMessage(client.isSending);
+    doPostMessage(client.isSending);
     return;
   }
 
@@ -40,12 +44,12 @@ addEventListener("message", async (ev: MessageEvent) => {
     await readyPromise;
     try {
       const data = await send(ev.data.mail);
-      postMessage({
+      doPostMessage({
         __ret: ev.data.__mail,
         res: data,
       });
     } catch (ex) {
-      postMessage({
+      doPostMessage({
         __ret: ev.data.__mail,
         err: ex,
       });
