@@ -82,8 +82,11 @@ function hasNonAsciiCharacters(str: string) {
 }
 
 export function quotedPrintableEncodeInline(data: string) {
-  if (hasNonAsciiCharacters(data) || data.startsWith("=?")) {
+  if (data.startsWith("=?")) {
     return `=?utf-8?Q?${quotedPrintableEncode(data)}?=`;
+  }
+  if(hasNonAsciiCharacters(data)){
+    return quotedPrintableEncode(data).split("\r\n").map((l, i) => `${i>0?" ":""}=?utf-8?Q?${l}?=`).join("\r\n");
   }
 
   return data;
