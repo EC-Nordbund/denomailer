@@ -41,16 +41,20 @@ export function quotedPrintableEncode(data: string, encLB = false) {
   const lines = Math.ceil(encodedData.length / 74) - 1;
 
   let offset = 0;
+  let offsetWrapChars = "";
   for (let i = 0; i < lines; i++) {
     let old = encodedData.slice(i * 74 + offset, (i + 1) * 74);
     offset = 0;
+    offsetWrapChars = "";
 
     if (old.at(-1) === "=") {
+      offsetWrapChars = old.slice(old.length - 1, old.length);
       old = old.slice(0, old.length - 1);
       offset = -1;
     }
 
     if (old.at(-2) === "=") {
+      offsetWrapChars = old.slice(old.length - 2, old.length);
       old = old.slice(0, old.length - 2);
       offset = -2;
     }
@@ -62,8 +66,12 @@ export function quotedPrintableEncode(data: string, encLB = false) {
     }
   }
 
+  if(offsetWrapChars !== "" && !offsetWrapChars.startsWith("=")) {
+    offsetWrapChars = "=" + offsetWrapChars;
+  }
+
   // Add rest with no new line
-  ret += encodedData.slice(lines * 74);
+  ret += offsetWrapChars + encodedData.slice(lines * 74);
 
   return ret;
 }
@@ -74,8 +82,17 @@ function hasNonAsciiCharacters(str: string) {
 }
 
 export function quotedPrintableEncodeInline(data: string) {
-  if (hasNonAsciiCharacters(data) || data.startsWith("=?")) {
+  if (data.startsWith("=?")) {
     return `=?utf-8?Q?${quotedPrintableEncode(data)}?=`;
+  }
+  if(hasNonAsciiCharacters(data)){
+    data = quotedPrintableEncode(data).split("\r\n").map((l, i) => {
+	    if(l.endsWith("=")){
+		    // strip "=" that was appended by quotedPrintableEncode, but don't need for single line's =??= encoding
+        	l = l.substring(0, l.length - 1);
+	    }
+		return `${i>0?" ":""}=?utf-8?Q?${l}?=`;
+    }).join("\r\n");
   }
 
   return data;
