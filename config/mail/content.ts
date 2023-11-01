@@ -1,4 +1,4 @@
-import { quotedPrintableEncode } from "./encoding.ts";
+import {mimeEncode, quotedPrintableEncode} from "./encoding.ts";
 
 export interface Content {
   mimeType: string;
@@ -10,10 +10,12 @@ export function resolveContent({
   text,
   html,
   mimeContent,
+  mimeEncoding
 }: {
   text?: string;
   html?: string;
   mimeContent?: Content[];
+  mimeEncoding?: "quoted-printable" | "base64";
 }): Content[] {
   const newContent = [...mimeContent ?? []];
 
@@ -27,16 +29,16 @@ export function resolveContent({
   if (text) {
     newContent.push({
       mimeType: 'text/plain; charset="utf-8"',
-      content: quotedPrintableEncode(text),
-      transferEncoding: "quoted-printable",
+      content: mimeEncode(text, mimeEncoding),
+      transferEncoding: mimeEncoding,
     });
   }
 
   if (html) {
     newContent.push({
       mimeType: 'text/html; charset="utf-8"',
-      content: quotedPrintableEncode(html),
-      transferEncoding: "quoted-printable",
+      content: mimeEncode(html),
+      transferEncoding: mimeEncoding,
     });
   }
 

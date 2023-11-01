@@ -132,6 +132,11 @@ export interface ClientOptions {
      * - ...
      */
     preprocessors?: Preprocessor[];
+    /**
+     * Set the encoding for the mail content
+     * @default quoted-printable
+     */
+    mimeEncoding?: "quoted-printable" | "base64";
   };
 }
 ```
@@ -179,6 +184,9 @@ type Preprocessor = (
 It takes a preprocessed email config (ResolvedSendConfig) and the preprocessed
 client options (ResolvedClientOptions) and returns a possibly modified email
 config.
+
+You can change the encoding of the mail subject and content with `mimeEncoding`.
+`mimeEncoding: quoted-printable` (default).
 
 #### pool
 
@@ -234,7 +242,8 @@ const client = new SMTPClient({
   },
   client: {
     warning: "log",
-    preprocessors: [filterBurnerMails],
+    preprocessors: [filterBurnerMails], 
+    mimeEncoding: "base64",
   },
   debug: {
     log: false,
@@ -263,6 +272,7 @@ export interface SendConfig {
   subject: string;
   content?: string;
   mimeContent?: Content[];
+  mimeEncoding?: "quoted-printable" | "base64";
   html?: string;
   inReplyTo?: string;
   replyTo?: string;
@@ -288,6 +298,11 @@ Add custom headers to the email.
 
 There may be instances where you want to use your own encoding. This option
 allows you to specify the content of the mail.
+
+#### mimeEncoding
+
+Subject and Content are encoded with `quoted-printable` by default. You can change it to `base64`.
+this `mimeEncoding` can overwrite Client's default `mimeEncoding`.
 
 #### content & html
 

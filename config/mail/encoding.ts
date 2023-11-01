@@ -1,6 +1,23 @@
 export { base64Decode, base64Encode } from "../../deps.ts";
+import { base64Encode } from "../../deps.ts";
 
 const encoder = new TextEncoder();
+
+export function mimeEncode(data: string, encoding?: string) {
+  if(encoding === "base64"){
+    return base64EncodeWrapLine(data);
+  }else{
+    return quotedPrintableEncode(data);
+  }
+}
+
+export function mimeEncodeInline(data: string, encoding?: string) {
+  if(encoding === "base64"){
+    return base64EncodeInline(data);
+  }else{
+    return quotedPrintableEncodeInline(data);
+  }
+}
 
 /**
  * Encodes a string as quotedPrintable
@@ -41,16 +58,20 @@ export function quotedPrintableEncode(data: string, encLB = false) {
   const lines = Math.ceil(encodedData.length / 74) - 1;
 
   let offset = 0;
+  let offsetWrapChars = "";
   for (let i = 0; i < lines; i++) {
     let old = encodedData.slice(i * 74 + offset, (i + 1) * 74);
     offset = 0;
+    offsetWrapChars = "";
 
     if (old.at(-1) === "=") {
+      offsetWrapChars = old.slice(old.length - 1, old.length);
       old = old.slice(0, old.length - 1);
       offset = -1;
     }
 
     if (old.at(-2) === "=") {
+      offsetWrapChars = old.slice(old.length - 2, old.length);
       old = old.slice(0, old.length - 2);
       offset = -2;
     }
@@ -62,8 +83,12 @@ export function quotedPrintableEncode(data: string, encLB = false) {
     }
   }
 
+  if(offsetWrapChars !== "" && !offsetWrapChars.startsWith("=")) {
+    offsetWrapChars = "=" + offsetWrapChars;
+  }
+
   // Add rest with no new line
-  ret += encodedData.slice(lines * 74);
+  ret += offsetWrapChars + encodedData.slice(lines * 74);
 
   return ret;
 }
@@ -74,9 +99,42 @@ function hasNonAsciiCharacters(str: string) {
 }
 
 export function quotedPrintableEncodeInline(data: string) {
-  if (hasNonAsciiCharacters(data) || data.startsWith("=?")) {
+  if (data.startsWith("=?")) {
     return `=?utf-8?Q?${quotedPrintableEncode(data)}?=`;
+  }
+  if(hasNonAsciiCharacters(data)){
+    data = quotedPrintableEncode(data).split("\r\n").map((l, i) => {
+	    if(l.endsWith("=")){
+		    // strip "=" that was appended by quotedPrintableEncode, but don't need for single line's =??= encoding
+        	l = l.substring(0, l.length - 1);
+	    }
+		return `${i>0?" ":""}=?utf-8?Q?${l}?=`;
+    }).join("\r\n");
   }
 
   return data;
+}
+
+export function base64EncodeWrapLine(data: string) {
+  const maxlen = 60;
+  const base64Data = base64Encode(data);
+
+  let encodedLines = [];
+  for (
+      let line = 0;
+      line < Math.ceil(base64Data.length / maxlen);
+      line++
+  ) {
+    const lineOfBase64 = base64Data.slice(
+        line * maxlen,
+        (line + 1) * maxlen,
+    );
+    encodedLines.push(lineOfBase64);
+  }
+  return encodedLines.join("\r\n");
+}
+
+export function base64EncodeInline(data: string) {
+  const encodedLines = base64EncodeWrapLine(data);
+  return encodedLines.split("\r\n").map((l, i) => `${i>0?" ":""}=?utf-8?B?${l}?=`).join("\r\n");
 }
