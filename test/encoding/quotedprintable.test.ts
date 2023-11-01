@@ -58,6 +58,6 @@ Deno.test("test quoted-printable encode inline multibytes", () => {
 
 Deno.test("test quoted-printable encode inline multibytes and multi lines", () => {
   const encodedString = quotedPrintableEncodeInline("これは日本語のメールだよ");
-  assertEquals(encodedString, "=?utf-8?Q?=e3=81=93=e3=82=8c=e3=81=af=e6=97=a5=e6=9c=ac=e8=aa=9e=e3=81=ae=e3=83=a1=?=\r\n" +
+  assertEquals(encodedString, "=?utf-8?Q?=e3=81=93=e3=82=8c=e3=81=af=e6=97=a5=e6=9c=ac=e8=aa=9e=e3=81=ae=e3=83=a1?=\r\n" +
       " =?utf-8?Q?=e3=83=bc=e3=83=ab=e3=81=a0=e3=82=88?=");
 });

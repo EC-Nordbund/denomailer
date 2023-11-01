@@ -86,7 +86,13 @@ export function quotedPrintableEncodeInline(data: string) {
     return `=?utf-8?Q?${quotedPrintableEncode(data)}?=`;
   }
   if(hasNonAsciiCharacters(data)){
-    return quotedPrintableEncode(data).split("\r\n").map((l, i) => `${i>0?" ":""}=?utf-8?Q?${l}?=`).join("\r\n");
+    data = quotedPrintableEncode(data).split("\r\n").map((l, i) => {
+	    if(l.endsWith("=")){
+		    // strip "=" that was appended by quotedPrintableEncode, but don't need for single line's =??= encoding
+        	l = l.substring(0, l.length - 1);
+	    }
+		return `${i>0?" ":""}=?utf-8?Q?${l}?=`;
+    }).join("\r\n");
   }
 
   return data;
