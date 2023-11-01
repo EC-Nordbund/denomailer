@@ -14,7 +14,7 @@ import {
 } from "./email.ts";
 import { ResolvedClientOptions } from "../client.ts";
 import { Headers, validateHeaders } from "./headers.ts";
-import { quotedPrintableEncodeInline } from "./encoding.ts";
+import {mimeEncodeInline, quotedPrintableEncodeInline} from "./encoding.ts";
 /**
  * Config for a mail
  */
@@ -27,6 +27,7 @@ export interface SendConfig {
   subject: string;
   content?: string;
   mimeContent?: Content[];
+  mimeEncoding?: "quoted-printable" | "base64";
   html?: string;
   inReplyTo?: string;
   replyTo?: string;
@@ -49,6 +50,7 @@ export interface ResolvedSendConfig {
   date: string;
   subject: string;
   mimeContent: Content[];
+  mimeEncoding?: "quoted-printable" | "base64";
   inReplyTo?: string;
   replyTo?: saveMailObject;
   references?: string;
@@ -68,6 +70,7 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     subject,
     content,
     mimeContent,
+    mimeEncoding,
     html,
     inReplyTo,
     replyTo,
@@ -86,12 +89,13 @@ export function resolveSendConfig(config: SendConfig): ResolvedSendConfig {
     date,
     mimeContent: resolveContent({
       mimeContent,
+      mimeEncoding,
       html,
       text: content,
     }),
     replyTo: replyTo ? parseSingleEmail(replyTo) : undefined,
     inReplyTo,
-    subject: quotedPrintableEncodeInline(subject),
+    subject: mimeEncodeInline(subject, mimeEncoding),
     attachments: attachments
       ? attachments.map((attachment) => resolveAttachment(attachment))
       : [],

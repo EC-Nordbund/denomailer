@@ -1,6 +1,23 @@
 export { base64Decode, base64Encode } from "../../deps.ts";
+import { base64Encode } from "../../deps.ts";
 
 const encoder = new TextEncoder();
+
+export function mimeEncode(data: string, encoding?: string) {
+  if(encoding === "base64"){
+    return base64EncodeWrapLine(data);
+  }else{
+    return quotedPrintableEncode(data);
+  }
+}
+
+export function mimeEncodeInline(data: string, encoding?: string) {
+  if(encoding === "base64"){
+    return base64EncodeInline(data);
+  }else{
+    return quotedPrintableEncodeInline(data);
+  }
+}
 
 /**
  * Encodes a string as quotedPrintable
@@ -96,4 +113,28 @@ export function quotedPrintableEncodeInline(data: string) {
   }
 
   return data;
+}
+
+export function base64EncodeWrapLine(data: string) {
+  const maxlen = 60;
+  const base64Data = base64Encode(data);
+
+  let encodedLines = [];
+  for (
+      let line = 0;
+      line < Math.ceil(base64Data.length / maxlen);
+      line++
+  ) {
+    const lineOfBase64 = base64Data.slice(
+        line * maxlen,
+        (line + 1) * maxlen,
+    );
+    encodedLines.push(lineOfBase64);
+  }
+  return encodedLines.join("\r\n");
+}
+
+export function base64EncodeInline(data: string) {
+  const encodedLines = base64EncodeWrapLine(data);
+  return encodedLines.split("\r\n").map((l, i) => `${i>0?" ":""}=?utf-8?B?${l}?=`).join("\r\n");
 }

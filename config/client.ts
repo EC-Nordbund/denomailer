@@ -23,6 +23,7 @@ export interface ResolvedClientOptions {
   client: {
     warning: "ignore" | "log" | "error";
     preprocessors: Preprocessor[];
+    mimeEncoding?: "quoted-printable" | "base64";
   };
 }
 
@@ -106,6 +107,11 @@ export interface ClientOptions {
      * - ...
      */
     preprocessors?: Preprocessor[];
+    /**
+     * Set the encoding for the mail content
+     * @default quoted-printable
+     */
+    mimeEncoding?: "quoted-printable" | "base64";
   };
 }
 
@@ -144,6 +150,7 @@ export function resolveClientOptions(
     client: {
       warning: config.client?.warning ?? "log",
       preprocessors: config.client?.preprocessors ?? [],
+      mimeEncoding: config.client?.mimeEncoding ?? "quoted-printable",
     },
   };
 }

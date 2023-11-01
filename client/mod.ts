@@ -135,6 +135,9 @@ export class SMTPHandler {
    * @returns nothing (for now as this might change in the future!)
    */
   send(config: SendConfig): Promise<void> {
+    if(config.mimeEncoding == null && this.#clientConfig.client.mimeEncoding != null){
+      config.mimeEncoding = this.#clientConfig.client.mimeEncoding;
+    }
     let resolvedConfig = resolveSendConfig(config);
 
     for (let i = 0; i < this.#clientConfig.client.preprocessors.length; i++) {
