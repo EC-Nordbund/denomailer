@@ -104,13 +104,13 @@ export class SMTPClient {
       if (config.to.length > 0) {
         this.#connection.writeCmd(
           "To: ",
-          config.to.map((m) => `${m.name} <${m.mail}>`).join(";"),
+          config.to.map((m) => `${m.name} <${m.mail}>`).join(","),
         );
       }
       if (config.cc.length > 0) {
         this.#connection.writeCmd(
           "Cc: ",
-          config.cc.map((m) => `${m.name} <${m.mail}>`).join(";"),
+          config.cc.map((m) => `${m.name} <${m.mail}>`).join(","),
         );
       }
 
