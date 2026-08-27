@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: denoland/setup-deno@v1
         with:
-          deno-version: v1.x
+          deno-version: 2.x
       - run: docker run -d -p 1080:1080 -p 1025:1025 reachfive/fake-smtp-server
       - run: deno test --unstable -A ./test/e2e/
       - run: deno fmt --check
